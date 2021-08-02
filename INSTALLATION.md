@@ -148,6 +148,7 @@ Alternatively, wrote some visualization scripts in `pysim/visualize_results` to 
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_5.gif"> 
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_10.gif"> 
 </div>
+
 ### Epoch 15, Epoch 20, Epoch 25
 <div align="center">
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_15.gif"> 
