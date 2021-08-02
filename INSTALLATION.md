@@ -128,23 +128,36 @@ It appears that the appropriate directories are already symlinked, so no need to
 
 The examples can be run as follows (per the rest of the original README)
 
-5. Run the examples
-## Examples
+## Testing Simulator Capabilities
 ### Learn to "fold" a cloth in half (while it is dropping with gravity)
 ```bash
 python exp_cloth_fold.py
 ```
-By default, the simulation output would be stored in `pysim/default_out` directory. 
+By default, the simulation output is stored in `pysim/default_out` directory. 
 
 To visualize the simulation results, use
 ```bash
 python msim.py
 ```
 
-The visualization is the same for all other experiments.
+Alternatively, wrote some visualization scripts in `pysim/visualize_results` to generate renderings/gifs with Blender:
+
+### Epoch 0, Epoch 5, Epoch 10
 <div align="center">
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_0.gif"> 
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_5.gif"> 
 <img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_10.gif"> 
+</div>
+### Epoch 15, Epoch 20, Epoch 25
+<img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_15.gif"> 
+<img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_19.gif"> 
+<img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/rollout_last.gif"> 
+</div>
+
+Appears to learn how to fold the left side of the cloth down, but doesn't achieve a full half-folded state yet (might take some tuning/task simplification)
+
+### Target Half-Folded State
+</div>
+<img width="300px" src="https://github.com/priyasundaresan/diffsim/blob/master/pysim/visualize_results/target/00000.jpg"> 
 </div>
 
