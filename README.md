@@ -11,6 +11,7 @@
 [[GitHub]](https://github.com/YilingQiao/diffsim)
 
 ## Setup
+## NOTE: If the following instructions don't work, my (Priya) installation/debugging instructions are [here](./INSTALLATION.md)
 1. Create a conda virtual environment and activate it.
 ```bash
 conda create -n diffsim python=3.6 -y
