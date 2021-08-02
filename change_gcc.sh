@@ -5,6 +5,8 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+echo "$1"
+
 if [ ! -f "/usr/bin/gcc-$1" ] || [ ! -f "/usr/bin/g++-$1" ]; then
     echo "no such version gcc/g++ installed" 1>&2
     exit 1
