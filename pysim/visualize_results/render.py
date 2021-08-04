@@ -45,7 +45,10 @@ def set_viewport_shading(mode):
 
 def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,3))
-    bpy.ops.object.camera_add(location=(0,-2,0.5), rotation=(np.pi/2,0,0))
+    bpy.ops.object.light_add(type='POINT', location=(0,-1,0.5))
+    
+    #bpy.ops.object.camera_add(location=(0,-2,0.5), rotation=(np.pi/2,0,0))
+    bpy.ops.object.camera_add(location=(0,-2,1.5), rotation=(np.pi/3,0,0))
     bpy.context.scene.camera = bpy.context.object
     return bpy.context.object
 
@@ -124,27 +127,23 @@ def load_objs(objs_dir, episode):
 
     return joined_obj
 
-def render_rollout(exp_dir, epoch_dir, steps=35):
+def render_rollout(exp_dir, epoch_dir, steps=35, offset=0):
 
     objs_dir = os.path.abspath(os.path.join('..', exp_dir, epoch_dir)) 
     
-    render_size = (640,640)
-    #set_render_settings('BLENDER_WORKBENCH', render_size)
-    #set_render_settings('BLENDER_EEVEE', render_size)
-    set_render_settings('CYCLES', render_size)
-    clear_scene()
-    camera = add_camera_light()
-
     for episode in range(steps):
         obj = load_objs(objs_dir, episode)
-        render(episode)
+        render(episode+offset)
         obj.select_set(True)
         bpy.ops.object.delete()
-
     
 
 if __name__ == '__main__':
-    #render_rollout('cloth_folding_1-1', 'out', 35)
-    render_rollout('cloth_folding_1-1', 'out19', 35)
-    #render_rollout('cloth_folding_1-1', 'target', 1)
-    #generate_dataset(15)
+    clear_scene()
+    camera = add_camera_light()
+    render_size = (640,640)
+    set_render_settings('BLENDER_EEVEE', render_size)
+    offset = 0
+    for i in range(0,21,5):
+        render_rollout('default_out', 'out%d'%i, 20, offset=offset)
+        offset += 20

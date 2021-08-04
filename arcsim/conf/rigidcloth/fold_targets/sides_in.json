@@ -4,7 +4,7 @@
     "end_time": 4,
     "cloths": [
     {
-        "mesh": "meshes/rigidcloth/fold_target/half_fold.obj",
+        "mesh": "meshes/rigidcloth/fold_target/sides_in.obj",
         "materials": [{"data": "materials/gray-interlock.json",
                        "thicken": 2}],
         "remeshing": {
@@ -23,6 +23,6 @@
         "movable": 0
     }],
     "disable":["remeshing","proximity"],
-    "gravity":[0, 0, -1.1],
+    "gravity":[0, 0, -1.2],
     "magic": {"repulsion_thickness": 5e-3, "collision_stiffness": 1e6}
 }

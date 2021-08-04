@@ -14,14 +14,12 @@ now = datetime.now()
 timestamp = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 #steps = 30
 #epochs= 10
-#steps = 45
-steps = 38
-epochs= 25
-node_number = 0
+steps = 40
+epochs= 20
 #handles = [25, 60, 30, 54] # corners
-#handles = [6,16,25,30,54,60,69,70] # side verts + 2 corners
+handles = [6,16,25,30,54,60,69,70] # side verts + 2 corners
 #handles = [6,16,25,30,54,60,69,70,14,23,48] # side verts + inner side verts + 2 corners
-handles = [6,16,25,30,54,60,69,70,14,23,48,11,47,74] # side verts + inner side verts + 2 corners
+#handles = [24,25,52,53,54,71] # corners but more
 losses = []
 param_g = torch.zeros([steps, len(handles)*3],dtype=torch.float64, requires_grad=True)
 out_path = 'default_out'
@@ -51,6 +49,8 @@ def reset_sim(sim, epoch):
 def get_target_mesh():
     sim = arcsim.get_sim()
     arcsim.init_physics('conf/rigidcloth/fold_targets/half_fold.json',out_path+'/target',False)
+    #arcsim.init_physics('conf/rigidcloth/fold_targets/sides_in.json',out_path+'/target',False)
+    #arcsim.init_physics('conf/rigidcloth/fold_targets/diag_quarters.json',out_path+'/target',False)
     global node_number
     node_number = len(sim.cloths[0].mesh.nodes)
     ref = [sim.cloths[0].mesh.nodes[i].x.numpy() for i in range(node_number)]
@@ -60,9 +60,12 @@ def get_target_mesh():
 def get_loss(sim,ref):
     reg  = torch.norm(param_g, p=2)*0.001
     loss = 0
+    print("VERTS", ref.shape[0], len(sim.cloths[0].mesh.nodes))
+
     for i in range(ref.shape[0]):
         loss += torch.norm(ref[i]-sim.cloths[0].mesh.nodes[i].x)**2
     loss /= node_number
+
     loss += reg
     return loss
 
@@ -83,8 +86,6 @@ def run_sim(steps,sim,ref):
 def do_train(cur_step,optimizer,scheduler,sim):
     epoch = 0
     ref = get_target_mesh()
-    print(ref)
-    #arcsim.delete_mesh(sim.cloths[0].mesh)
     while True:
         reset_sim(sim, epoch)
         st = time.time()
