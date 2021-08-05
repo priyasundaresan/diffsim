@@ -13,6 +13,9 @@ import numpy as np
 import os
 from datetime import datetime
 
+from chamfer_distance import ChamferDistance
+chamfer_dist = ChamferDistance()
+
 #from pytorch3d.structures import Meshes
 #from pytorch3d.ops import sample_points_from_meshes
 #from pytorch3d.loss import (
@@ -160,9 +163,12 @@ def get_loss(sim):
     curr_points = sample_points_from_meshes(verts, faces, face_areas, 1000)
     #plot_pointcloud(ref_points)
 
-    for i in range(node_number):
-        loss += torch.norm(ref[i]-(sim.cloths[0].mesh.nodes[i].x))**2
-    loss /= node_number
+    #for i in range(node_number):
+    #    loss += torch.norm(ref[i]-(sim.cloths[0].mesh.nodes[i].x))**2
+    #loss /= node_number
+
+    dist1, dist2 = chamfer_dist(curr_points.float(), ref_points.float())
+    loss = (torch.mean(dist1)) + (torch.mean(dist2))
 
     #loss += reg
     return loss
