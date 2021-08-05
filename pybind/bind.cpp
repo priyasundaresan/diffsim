@@ -128,6 +128,8 @@ PYBIND11_MODULE(arcsim, m){
 		.def(py::init<>())
 		.def_readwrite("dummy_node",&Mesh::dummy_node, REF)
 		.def_readwrite("nodes",&Mesh::nodes, REF)
+		.def_readwrite("verts",&Mesh::verts, REF)
+		.def_readwrite("faces",&Mesh::faces, REF)
 		;
 	py::bind_vector<std::vector<Node*> >(m, "VNodeP");
 	py::class_<Node>(m, "Node")
@@ -135,6 +137,21 @@ PYBIND11_MODULE(arcsim, m){
 		.def_readwrite("v",&Node::v, REF)
 		.def_readwrite("m",&Node::m, REF)
 		;
+
+	py::bind_vector<std::vector<Vert*> >(m, "VVertP");
+	py::class_<Vert>(m, "Vert")
+		.def_readwrite("index",&Vert::index, REF)
+		.def_readwrite("node",&Vert::node, REF)
+		.def_readwrite("adjf",&Vert::adjf, REF)
+		;
+
+	py::bind_vector<std::vector<Face*> >(m, "VFaceP");
+	py::class_<Face>(m, "Face")
+		.def_readwrite("v",&Face::v, REF)
+		.def_readwrite("index",&Face::index, REF)
+		.def_readwrite("a",&Face::a, REF)
+		;
+
 	// py::class_<Vec3>(m, "Vec3")
 	// 	.def("__getitem__", [](const Vec3 &s, size_t i) {
  //            return s[i];
