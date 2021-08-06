@@ -59,8 +59,8 @@ class Net(nn.Module):
 with open('conf/rigidcloth/triangle_fold/start.json','r') as f:
 	config = json.load(f)
 
-#ref = np.load('conf/rigidcloth/triangle_fold/ref_mesh.npy')
-#ref = torch.from_numpy(np.vstack(ref))
+ref = np.load('conf/rigidcloth/triangle_fold/ref_mesh.npy')
+ref = torch.from_numpy(np.vstack(ref))
 
 ref_verts = np.load('conf/rigidcloth/triangle_fold/ref_verts.npy')
 ref_verts = torch.from_numpy(ref_verts)
@@ -148,27 +148,22 @@ def plot_pointcloud(points, title=""):
 def get_loss(sim):
     #reg  = torch.norm(param_g, p=2)*0.001
     loss = 0
-    #node_number = ref.shape[0]
 
-    #for v in sim.cloths[0].mesh.verts:
-    #    print(v.index, v.node.x)
-    #for f in sim.cloths[0].mesh.faces:
-    #    print(f.index, [vert.index for vert in f.v], f.a)
+    #verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts])
+    #faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces])
+    #face_areas = torch.Tensor([[f.a] for f in sim.cloths[0].mesh.faces])
 
-    verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts])
-    faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces])
-    face_areas = torch.Tensor([[f.a] for f in sim.cloths[0].mesh.faces])
+    #ref_points = sample_points_from_meshes(ref_verts, ref_faces, ref_face_areas, 1000)
+    #curr_points = sample_points_from_meshes(verts, faces, face_areas, 1000)
+    ##plot_pointcloud(ref_points)
+    ##plot_pointcloud(curr_points)
+    #dist1, dist2 = chamfer_dist(curr_points.float(), ref_points.float())
+    #loss = (torch.mean(dist1)) + (torch.mean(dist2))
 
-    ref_points = sample_points_from_meshes(ref_verts, ref_faces, ref_face_areas, 1000)
-    curr_points = sample_points_from_meshes(verts, faces, face_areas, 1000)
-    #plot_pointcloud(ref_points)
-
-    #for i in range(node_number):
-    #    loss += torch.norm(ref[i]-(sim.cloths[0].mesh.nodes[i].x))**2
-    #loss /= node_number
-
-    dist1, dist2 = chamfer_dist(curr_points.float(), ref_points.float())
-    loss = (torch.mean(dist1)) + (torch.mean(dist2))
+    node_number = ref.shape[0]
+    for i in range(node_number):
+        loss += torch.norm(ref[i]-(sim.cloths[0].mesh.nodes[i].x))**2
+    loss /= node_number
 
     #loss += reg
     return loss
@@ -199,40 +194,41 @@ def run_sim(steps, sim, net):
 	return loss
 
 def do_train(cur_step,optimizer,sim,net):
-	epoch = 0
-	while True:
-		# steps = int(1*15*spf)
-		steps = 20
-
-		reset_sim(sim, epoch)
-
-		st = time.time()
-		#loss, ans = run_sim(steps, sim, net, goal)
-		loss = run_sim(steps, sim, net)
-		en0 = time.time()
-		
-		optimizer.zero_grad()
-
-		loss.backward()
-
-		en1 = time.time()
-		print("=======================================")
-		print('epoch {}: loss={}\n'.format(epoch, loss.data))
-
-		print('forward tim = {}'.format(en0-st))
-		print('backward time = {}'.format(en1-en0))
-
-		if epoch % 5 == 0:
-			torch.save(net.state_dict(), torch_model_path)
-
-		if loss<1e-3:
-			break
-
-		optimizer.step()
-		if epoch>=400:
-			quit()
-		epoch = epoch + 1
-		# break
+    epoch = 0
+    while epoch < 31:
+    #while epoch < 31:
+    	# steps = int(1*15*spf)
+    	steps = 20
+    
+    	reset_sim(sim, epoch)
+    
+    	st = time.time()
+    	#loss, ans = run_sim(steps, sim, net, goal)
+    	loss = run_sim(steps, sim, net)
+    	en0 = time.time()
+    	
+    	optimizer.zero_grad()
+    
+    	loss.backward()
+    
+    	en1 = time.time()
+    	print("=======================================")
+    	print('epoch {}: loss={}\n'.format(epoch, loss.data))
+    
+    	print('forward tim = {}'.format(en0-st))
+    	print('backward time = {}'.format(en1-en0))
+    
+    	if epoch % 5 == 0:
+    		torch.save(net.state_dict(), torch_model_path)
+    
+    	if loss<1e-3:
+    		break
+    
+    	optimizer.step()
+    	if epoch>=400:
+    		quit()
+    	epoch = epoch + 1
+    	# break
 
 with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	tot_step = 1
