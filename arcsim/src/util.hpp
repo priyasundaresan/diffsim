@@ -82,6 +82,7 @@ template <typename T> inline int find (const T &x, const std::vector<T> &xs) {
 template <typename T> inline bool is_in (const T *x, T* const *xs, int n=3) {
     return find(x, xs, n) != -1;}
 
+
 template <typename T> inline bool is_in (const T &x, const T *xs, int n=3) {
     return find(x, xs, n) != -1;}
 

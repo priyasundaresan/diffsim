@@ -144,6 +144,6 @@ if __name__ == '__main__':
     render_size = (640,640)
     set_render_settings('BLENDER_EEVEE', render_size)
     offset = 0
-    for i in range(0,21,5):
+    for i in range(0,31,5):
         render_rollout('default_out', 'out%d'%i, 20, offset=offset)
         offset += 20
