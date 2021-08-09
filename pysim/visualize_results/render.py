@@ -47,8 +47,8 @@ def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,3))
     bpy.ops.object.light_add(type='POINT', location=(0,-1,0.5))
     
-    #bpy.ops.object.camera_add(location=(0,-2,0.5), rotation=(np.pi/2,0,0))
     bpy.ops.object.camera_add(location=(0,-2,1.5), rotation=(np.pi/3,0,0))
+    #bpy.ops.object.camera_add(location=(-0.5,-1,1), rotation=(np.pi/3,0,0))
     bpy.context.scene.camera = bpy.context.object
     return bpy.context.object
 
@@ -65,8 +65,8 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.render.resolution_x = render_width
     scene.render.resolution_y = render_height
     scene.use_nodes = True
-    scene.render.image_settings.file_format='JPEG'
-    scene.view_settings.exposure = 1.3
+    scene.render.image_settings.file_format='PNG'
+    scene.view_settings.exposure = 2.5
     if engine == 'BLENDER_WORKBENCH':
         scene.render.image_settings.color_mode = 'RGB'
         scene.display_settings.display_device = 'None'
@@ -92,10 +92,16 @@ def set_render_settings(engine, render_size, generate_masks=True):
 
 def colorize(obj, color):
     '''Add color to object'''
-    mat = bpy.data.materials.new(name="Color")
-    mat.use_nodes = False
+    if '%sColor'%obj.name in bpy.data.materials:
+        mat = bpy.data.materials['%sColor'%obj.name]
+    else:
+        mat = bpy.data.materials.new(name="%sColor"%obj.name)
+        mat.use_nodes = False
     mat.diffuse_color = color
-    obj.data.materials.append(mat)
+    if not obj.data.materials:
+        obj.data.materials.append(mat)
+    else:
+        obj.data.materials[0] = mat
     set_viewport_shading('MATERIAL')
 
 def render(episode):
@@ -105,37 +111,59 @@ def render(episode):
 def load_objs(objs_dir, episode):
     objs_fnames = [f for f in os.listdir(objs_dir) if ((f[-3:] == 'obj') and (f[:3] != 'obs') and (int(f[:4]) == episode))]
     objs = []
-    COLORS = [(1,0,0,1), (0,1,0,1), (0,0,1,1)]
-    for i, fname in enumerate(objs_fnames):
+    COLORS = [(0.3,0,0.1,1), (0,0.0,0.1,1), (0,0,0.3,1)]
+    
+    for i, fname in enumerate(sorted(objs_fnames)):
         color = COLORS[i]
         bpy.ops.import_scene.obj(filepath=os.path.join(objs_dir, fname))
         obj = bpy.context.selected_objects[0]
-        #colorize(obj, color)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_add(type='SUBSURF')
+        bpy.context.object.modifiers["Subdivision"].levels=2 # Smooths the cloth so it doesn't look blocky
+        bpy.ops.object.modifier_add(type='SOLIDIFY')
+        bpy.context.object.modifiers["Solidify"].thickness = 0.003
+        colorize(obj, color)
         objs.append(obj)
 
     bpy.ops.object.select_all(action='DESELECT')
     for obj in objs:
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.join()
 
-    joined_obj = bpy.context.selected_objects[0]
-    bpy.ops.object.select_all(action='DESELECT')
-    joined_obj.location += Vector((-0.5,0,-0.5))
-    joined_obj.rotation_euler.x -= np.pi/2
-    joined_obj.location += Vector((0,-0.5,1))
+    #bpy.ops.object.join()
+    #joined_obj = bpy.context.selected_objects[0]
+    #bpy.ops.object.select_all(action='DESELECT')
+    #joined_obj.location += Vector((-0.5,0,-0.5))
+    #joined_obj.rotation_euler.x -= np.pi/2
+    #joined_obj.location += Vector((0,-0.5,1))
 
-    return joined_obj
+    #return joined_obj
+
+    # comment out if not working
+    bpy.ops.transform.rotate(value=np.pi/2, orient_axis='X', orient_type='LOCAL', orient_matrix_type='LOCAL')
+    bpy.ops.transform.translate(value=(-0.5,0,0), orient_type='LOCAL', orient_matrix_type='LOCAL')
+    return objs
 
 def render_rollout(exp_dir, epoch_dir, steps=35, offset=0):
 
     objs_dir = os.path.abspath(os.path.join('..', exp_dir, epoch_dir)) 
     
     for episode in range(steps):
-        obj = load_objs(objs_dir, episode)
+        # uncomment for joining method
+        #obj = load_objs(objs_dir, episode)
+        #render(episode+offset)
+        #obj.select_set(True)
+        #bpy.ops.object.delete()
+
+        objs = load_objs(objs_dir, episode)
         render(episode+offset)
-        obj.select_set(True)
-        bpy.ops.object.delete()
+        clear_scene()
+        camera = add_camera_light()
+        
+        #for obj in objs:
+        #    print(obj.name)
+        #    obj.select_set(True)
+        #    bpy.ops.object.delete()
     
 
 if __name__ == '__main__':
@@ -143,7 +171,12 @@ if __name__ == '__main__':
     camera = add_camera_light()
     render_size = (640,640)
     set_render_settings('BLENDER_EEVEE', render_size)
+    #render_rollout('default_out', 'out%d'%0, 100, offset=offset)
     offset = 0
-    for i in range(0,31,5):
-        render_rollout('default_out', 'out%d'%i, 20, offset=offset)
-        offset += 20
+    #episode_length = 35
+    #num_train_epochs = 35
+    episode_length = 20
+    num_train_epochs = 45
+    for i in range(0,num_train_epochs,5):
+        render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
+        offset += episode_length

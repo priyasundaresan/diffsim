@@ -6,7 +6,8 @@ def get_last_saved_folder():
     fnames = os.listdir('default_out')
     fnames = [f for f in fnames if f != 'out' and 'out' in f]
     fnames_sorted = sorted(fnames, key=lambda x: int(x[3:]))
-    return os.path.join('default_out', fnames_sorted[-1])
+    #return os.path.join('default_out', fnames_sorted[-1])
+    return os.path.join('default_out', 'out20')
 
 with torch.autograd.profiler.profile() as prof:
 	#arcsim.msim(4,['arcsim','simulate','conf/rigidcloth/ground.json','out'])

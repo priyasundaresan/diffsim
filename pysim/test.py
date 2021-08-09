@@ -36,7 +36,18 @@ def test_bag_sim():
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/bag_placement/start.json'),'default_out/target',False)
 
+def test_tshirt_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/start_anim.json'),'default_out/out0',False)
+    for step in range(300):
+        print(step)
+        arcsim.sim_step()
+
 if __name__ == '__main__':
-    get_target_triangle_fold('conf/rigidcloth/triangle_fold', 'end.json')
+    test_tshirt_sim()
+    #get_target_triangle_fold('conf/rigidcloth/triangle_fold', 'end.json')
     #test_bag_sim()
     #print(get_target_mesh('conf/rigidcloth/half_fold', 'end.json'))
+    #print(get_target_mesh('conf/rigidcloth/clothing', 'end.json'))
