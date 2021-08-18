@@ -14,6 +14,7 @@ from datetime import datetime
 #handles = [28,29]
 #handles = [3,4,5,6,27,28,29,30]
 handles = [3,6,28,29,101]
+#handles = [1,4,65,66,67,73,88,92,93,106]
 
 if len(sys.argv)==1:
 	out_path = 'default_out'

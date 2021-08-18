@@ -11,7 +11,7 @@ import numpy as np
 import os
 from datetime import datetime
 
-handles = [25, 60, 30, 54, 43, 65]
+handles = [25, 60, 30, 54, 43, 65] # corners + middle edges
 #handles = [25, 60, 30]
 #handles = [60,30]
 #handles = [60]

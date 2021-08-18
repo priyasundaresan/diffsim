@@ -36,7 +36,7 @@ def test_bag_sim():
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/bag_placement/start.json'),'default_out/target',False)
 
-def test_tshirt_sim():
+def test_tshirt_xy_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
@@ -45,8 +45,62 @@ def test_tshirt_sim():
         print(step)
         arcsim.sim_step()
 
+def test_tshirt_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt_start_pinned.json'),'default_out/out0',False)
+    #sim.cloths[0].materials[0].damping = torch.Tensor([0.5])
+    for step in range(300):
+        print(step)
+        arcsim.sim_step()
+
+def test_sysid_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/end.json'),'default_out/out0',False)
+    #sim.gravity = torch.Tensor([0,0,0])
+    orig = sim.cloths[0].materials[0].stretching
+    print(sim.cloths[0].materials[0].stretchingori)
+    sim.cloths[0].materials[0].stretching = orig*1.75
+    print(sim.cloths[0].materials[0].stretchingori)
+    
+    #print(sim.cloths[0].materials[0].damping)
+    #sim.cloths[0].materials[0].damping = torch.Tensor([10])
+    #print(sim.cloths[0].materials[0].densityori)
+    #sim.cloths[0].materials[0].densityori = torch.Tensor([0.01])
+    #sim = arcsim.get_sim()
+
+    for step in range(300):
+        print(step)
+        arcsim.sim_step()
+
+def test_triangle_fold_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/triangle_fold/demo.json'),'default_out/out0',False)
+    for step in range(300):
+        arcsim.sim_step()
+
+def test_cloth_hang_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo.json'),'default_out/out0',False)
+    orig = sim.cloths[0].materials[0].bendingori
+    sim.cloths[0].materials[0].bendingori = orig*10
+    for step in range(300):
+        arcsim.sim_step()
+
 if __name__ == '__main__':
-    test_tshirt_sim()
+    test_cloth_hang_sim()
+    #test_triangle_fold_sim()
+    #test_sysid_sim()
+    #test_tshirt_sim()
     #get_target_triangle_fold('conf/rigidcloth/triangle_fold', 'end.json')
     #test_bag_sim()
     #print(get_target_mesh('conf/rigidcloth/half_fold', 'end.json'))
