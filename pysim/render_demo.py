@@ -36,10 +36,10 @@ lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
 #T[0][0] += 0.4
 #T[0][1] += -0.2
 
-# this is for cloth folding
+# this is for bag
 R, T = look_at_view_transform(1.25, 300, 0) 
-#T[0][0] -= 0.2
-#T[0][1] -= -0.2
+T[0][0] += 0.4
+T[0][1] -= 0.1
 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
 
@@ -63,8 +63,8 @@ renderer = MeshRenderer(
 )
 
 
-num_frames = 25
-demo_length = 100
+num_frames = 30
+demo_length = 30
 step = demo_length//num_frames
 out_dir = 'demo_video_frames'
 if not os.path.exists(out_dir):
@@ -77,7 +77,7 @@ for i in range(0, demo_length, step):
     all_textures = []
     vert_count = 0
     colors = torch.Tensor([[1,0,0], [0,1,0], [0,0,1]])
-    for j, f in enumerate(mesh_fnames):
+    for j, f in enumerate(mesh_fnames[:1]):
         verts, faces, aux = load_obj(os.path.join("default_out", "out0", f))
         faces_idx = faces.verts_idx.to(device) + vert_count
         verts = verts.to(device)
@@ -92,5 +92,3 @@ for i in range(0, demo_length, step):
     mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)], textures=textures)
     img  = renderer(mesh)[0,...,:3]*255
     cv2.imwrite('%s/%03d.jpg'%(out_dir, i//step), img.detach().cpu().numpy())
-    #cv2.imshow('img', img.detach().cpu().numpy())
-    #cv2.waitKey(0)

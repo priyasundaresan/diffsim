@@ -47,8 +47,8 @@ def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,3))
     bpy.ops.object.light_add(type='POINT', location=(0,-1,0.5))
     
-    bpy.ops.object.camera_add(location=(0,-2,1.5), rotation=(np.pi/3,0,0))
-    #bpy.ops.object.camera_add(location=(-0.5,-1,1), rotation=(np.pi/3,0,0))
+    #bpy.ops.object.camera_add(location=(-0.5,-2,0), rotation=(np.pi/2.2,0,0))
+    bpy.ops.object.camera_add(location=(-2.87,-1.416,0.22), rotation=(np.radians(81.8),0,np.radians(-57.5)))
     bpy.context.scene.camera = bpy.context.object
     return bpy.context.object
 
@@ -76,7 +76,7 @@ def set_render_settings(engine, render_size, generate_masks=True):
         scene.eevee.taa_samples = 1
         scene.eevee.taa_render_samples = 1
     elif engine == 'CYCLES':   
-        scene.render.image_settings.file_format='JPEG'
+        scene.render.image_settings.file_format='PNG'
         scene.cycles.samples = 20
         scene.view_settings.view_transform = 'Raw'
         scene.cycles.max_bounces = 1
@@ -90,7 +90,7 @@ def set_render_settings(engine, render_size, generate_masks=True):
         scene.render.tile_x = 16
         scene.render.tile_y = 16
 
-def colorize(obj, color):
+def colorize(obj, color, transparent=False):
     '''Add color to object'''
     if '%sColor'%obj.name in bpy.data.materials:
         mat = bpy.data.materials['%sColor'%obj.name]
@@ -98,6 +98,10 @@ def colorize(obj, color):
         mat = bpy.data.materials.new(name="%sColor"%obj.name)
         mat.use_nodes = False
     mat.diffuse_color = color
+    #mat.alpha = color[-1]
+    #mat.transparency_method = 'Z_TRANSPARENCY'        
+    #mat.use_transparency = True        
+    obj.show_transparent = True  
     if not obj.data.materials:
         obj.data.materials.append(mat)
     else:
@@ -111,7 +115,8 @@ def render(episode):
 def load_objs(objs_dir, episode):
     objs_fnames = [f for f in os.listdir(objs_dir) if ((f[-3:] == 'obj') and (f[:3] != 'obs') and (int(f[:4]) == episode))]
     objs = []
-    COLORS = [(0.3,0,0.1,1), (0,0.0,0.1,1), (0,0,0.3,1)]
+    #COLORS = [(0.3,0,0.1,1), (0,0.0,0.1,1), (0,0,0.3,1)]
+    COLORS = [(0.3,0,0.1,0.1), (0,0.0,0.1,1), (0,0,0.3,1)]
     
     for i, fname in enumerate(sorted(objs_fnames)):
         color = COLORS[i]
@@ -122,7 +127,7 @@ def load_objs(objs_dir, episode):
         bpy.context.object.modifiers["Subdivision"].levels=2 # Smooths the cloth so it doesn't look blocky
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers["Solidify"].thickness = 0.003
-        colorize(obj, color)
+        colorize(obj, color, transparent=(i==0))
         objs.append(obj)
 
     bpy.ops.object.select_all(action='DESELECT')
@@ -170,13 +175,13 @@ if __name__ == '__main__':
     clear_scene()
     camera = add_camera_light()
     render_size = (640,640)
-    set_render_settings('BLENDER_EEVEE', render_size)
-    #render_rollout('default_out', 'out%d'%0, 100, offset=offset)
-    offset = 0
-    #episode_length = 35
-    #num_train_epochs = 35
-    episode_length = 20
-    num_train_epochs = 45
-    for i in range(0,num_train_epochs,5):
-        render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
-        offset += episode_length
+    #set_render_settings('BLENDER_EEVEE', render_size)
+    set_render_settings('CYCLES', render_size)
+    render_rollout('default_out', 'out%d'%0, 100, offset=0)
+    #offset = 0
+    #episode_length = 25
+    #num_train_epochs = 25
+    #step = 5
+    #for i in range(0,num_train_epochs,step):
+    #    render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
+    #    offset += episode_length

@@ -82,8 +82,12 @@ def test_triangle_fold_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/triangle_fold/demo.json'),'default_out/out0',False)
-    for step in range(300):
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/triangle_fold/demo.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/triangle_fold/start.json'),'default_out/out0',False)
+    handles = [30,60]
+    for step in range(30):
+        sim.cloths[0].mesh.nodes[handles[0]].v += torch.Tensor([0,0,8]).double()
+        sim.cloths[0].mesh.nodes[handles[1]].v += torch.Tensor([0,0,8]).double()
         arcsim.sim_step()
 
 def test_cloth_hang_sim():
@@ -91,17 +95,20 @@ def test_cloth_hang_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo.json'),'default_out/out0',False)
-    orig = sim.cloths[0].materials[0].bendingori
-    sim.cloths[0].materials[0].bendingori = orig*10
-    for step in range(300):
+    for step in range(500):
+        arcsim.sim_step()
+
+def test_mask_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/mask/demo.json'),'default_out/out0',False)
+    for step in range(500):
+        print(step)
         arcsim.sim_step()
 
 if __name__ == '__main__':
-    test_cloth_hang_sim()
+    test_triangle_fold_sim()
+    #test_mask_sim()
+    #test_cloth_hang_sim()
     #test_triangle_fold_sim()
-    #test_sysid_sim()
-    #test_tshirt_sim()
-    #get_target_triangle_fold('conf/rigidcloth/triangle_fold', 'end.json')
-    #test_bag_sim()
-    #print(get_target_mesh('conf/rigidcloth/half_fold', 'end.json'))
-    #print(get_target_mesh('conf/rigidcloth/clothing', 'end.json'))
