@@ -31,14 +31,17 @@ from pytorch3d.renderer import (
 device = torch.device("cuda:0")
 
 lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
-# this is for cloth folding
-#R, T = look_at_view_transform(1.25, 340, 0) 
-#T[0][0] += 0.4
-#T[0][1] += -0.2
 
-# this is for bag
-R, T = look_at_view_transform(1.25, 300, 0) 
-T[0][0] += 0.4
+#R, T = look_at_view_transform(1.25, 300, 0) 
+#T[0][0] += 0.4
+#T[0][1] -= 0.1
+
+#R, T = look_at_view_transform(0.9, 270, 0) 
+#T[0][0] += 0.5
+#T[0][1] += 0.05
+
+R, T = look_at_view_transform(1, 300, 0) 
+T[0][0] += 0.5
 T[0][1] -= 0.1
 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
@@ -63,8 +66,8 @@ renderer = MeshRenderer(
 )
 
 
-num_frames = 30
-demo_length = 30
+num_frames = 20
+demo_length = 20
 step = demo_length//num_frames
 out_dir = 'demo_video_frames'
 if not os.path.exists(out_dir):

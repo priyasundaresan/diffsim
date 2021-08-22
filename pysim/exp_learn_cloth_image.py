@@ -11,7 +11,65 @@ import numpy as np
 import os
 from datetime import datetime
 
+import pytorch3d
+from pytorch3d.structures import Meshes
+from pytorch3d.io import load_obj
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+import cv2
+import matplotlib.image as mpimg
+
+from pytorch3d.renderer import (
+    look_at_view_transform,
+    look_at_rotation,
+    FoVPerspectiveCameras, 
+    OpenGLPerspectiveCameras, 
+    PointLights, 
+    DirectionalLights, 
+    Materials, 
+    RasterizationSettings, 
+    MeshRenderer, 
+    MeshRasterizer,  
+    SoftPhongShader,
+    TexturesUV,
+    TexturesVertex
+)
+
+device = torch.device("cuda:0")
+lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
+R, T = look_at_view_transform(1, 300, 0) 
+T[0][0] += 0.5
+T[0][1] -= 0.1
+
+camera = FoVPerspectiveCameras(device=device, R=R, T=T)
+
+raster_settings = RasterizationSettings(
+    image_size=300, 
+    blur_radius=0.0, 
+    faces_per_pixel=1, 
+    perspective_correct=False
+)
+
+renderer = MeshRenderer(
+    rasterizer=MeshRasterizer(
+        cameras=camera, 
+        raster_settings=raster_settings
+    ),
+    shader=SoftPhongShader(
+        device=device, 
+        cameras=camera,
+        lights=lights
+    )
+)
+
+criterion = torch.nn.MSELoss(reduction='mean')
+
 handles = [25, 60, 30, 54]
+
+total_steps = 20
 
 print(sys.argv)
 if len(sys.argv)==1:
@@ -38,11 +96,8 @@ class Net(nn.Module):
 		# x = torch.clamp(x, min=-5, max=5)
 		return x
 
-with open('conf/rigidcloth/drag/drag.json','r') as f:
+with open('conf/rigidcloth/drag/drag_plane_below.json','r') as f:
 	config = json.load(f)
-# matfile = config['cloths'][0]['materials'][0]['data']
-# with open(matfile,'r') as f:
-# 	matconfig = json.load(f)
 
 def save_config(config, file):
 	with open(file,'w') as f:
@@ -50,42 +105,56 @@ def save_config(config, file):
 
 save_config(config, out_path+'/conf.json')
 
-
 torch.set_num_threads(8)
 spf = config['frame_steps']
 
 scalev=1
 
-def reset_sim(sim, epoch, goal):
-	if epoch % 5==0:
-		arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
-		text_name = out_path+'/out%d'%epoch + "/goal.txt"
-		np.savetxt(text_name, goal[3:6], delimiter=',')
-	else:
-		arcsim.init_physics(out_path+'/conf.json',out_path+'/out',False)
+def reset_sim(sim, epoch):
+    arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
 
+def get_render_mesh_from_sim(sim):
+    colors = torch.Tensor([[1,0,0], [0,1,0], [0,0,1]])
 
-# def get_loss(ans, goal):
-# 	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-# 	dif = ans - goal
-# 	loss = torch.norm(dif.narrow(0, 3, 3), p=2)
+    cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
+    cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
+    cloth_rgb = torch.ones_like(cloth_verts) # (V, 3)
+    cloth_rgb[:,] = colors[2]
 
-# 	return loss
-def get_loss(ans, goal):
-	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-	diff = ans - goal
-	loss = torch.norm(diff.narrow(0, 3, 3), p=2)
+    all_verts = [cloth_verts]
+    all_faces = [cloth_faces]
+    all_textures = [cloth_rgb]
+    all_tex = torch.cat(all_textures)[None]
+    textures = TexturesVertex(verts_features=all_tex)
 
-	return loss
+    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)], textures=textures)
+    return mesh
 
-def run_sim(steps, sim, net, goal):
+def get_loss_per_iter(sim, epoch, sim_iter):
+    curr_mesh = get_render_mesh_from_sim(sim)
+    curr_image = renderer(curr_mesh)[0,...,:3]
+    ref_image = mpimg.imread('demo_exp_learn_cloth_image/%03d.jpg'%sim_iter)
+    ref_image = torch.from_numpy(ref_image)[...,:3].to(device)/255.
+
+    if epoch % 1 == 0:
+        visualization = np.hstack((curr_image.detach().cpu().numpy(), ref_image.detach().cpu().numpy()))
+        cv2.imwrite('%s/epoch%03d-%03d.jpg'%(out_path, epoch, sim_iter), visualization*255)
+
+    loss = criterion(curr_image, ref_image) 
+    return loss
+
+def run_sim(steps, sim, net, epoch):
+
+    #for param in net.parameters():
+    #    print(param.grad)
+
     for obstacle in sim.obstacles:
     	for node in obstacle.curr_state_mesh.nodes:
     		node.m    *= 0.2
     
     for step in range(steps):
         print(step)
-        remain_time = torch.tensor([(steps - step)/steps],dtype=torch.float64)
+        remain_time = torch.tensor([(total_steps - step)/total_steps],dtype=torch.float64)
         
         net_input = []
         for i in range(len(handles)):
@@ -102,45 +171,17 @@ def run_sim(steps, sim, net, goal):
         
         arcsim.sim_step()
     
-    cnt = 0
-    ans1 = torch.tensor([0, 0, 0],dtype=torch.float64)
-    for node in sim.cloths[0].mesh.nodes:
-    	cnt += 1
-    	ans1 = ans1 + node.x
-    ans1 /= cnt
-    
-    ans1 = torch.cat([torch.tensor([0, 0, 0],dtype=torch.float64),
-    						ans1])
-    
-    # ans  = ans1
-    ans = sim.obstacles[0].curr_state_mesh.dummy_node.x
-    
-    loss = get_loss(ans1, goal)
-    
-    return loss, ans
+    loss = get_loss_per_iter(sim, epoch, step)
+    return loss
 
 def do_train(cur_step,optimizer,sim,net):
 	epoch = 0
 	while True:
-		# steps = int(1*15*spf)
-		steps = 20
 
-		sigma = 0.05
-		z = np.random.random()*sigma + 0.5
-
-		y = np.random.random()*sigma - sigma/2
-		x = np.random.random()*sigma - sigma/2
-
-
-		ini_co = torch.tensor([0.0000, 0.0000, 0.0000,0.4744, 0.4751, 0.0564], dtype=torch.float64)
-		goal = torch.tensor([0.0000, 0.0000, 0.0000,
-		 0, 0, z],dtype=torch.float64)
-		goal = goal + ini_co
-
-		reset_sim(sim, epoch, goal)
+		reset_sim(sim, epoch)
 
 		st = time.time()
-		loss, ans = run_sim(steps, sim, net, goal)
+		loss = run_sim(total_steps, sim, net, epoch)
 		en0 = time.time()
 		
 		optimizer.zero_grad()
@@ -149,9 +190,7 @@ def do_train(cur_step,optimizer,sim,net):
 
 		en1 = time.time()
 		print("=======================================")
-		f.write('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		print('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		#print('epoch {}: loss={}  ans={}\n'.format(epoch, loss.data, ans.data))
+		print('epoch {}: loss={}\n'.format(epoch, loss.data))
 
 		print('forward tim = {}'.format(en0-st))
 		print('backward time = {}'.format(en1-en0))

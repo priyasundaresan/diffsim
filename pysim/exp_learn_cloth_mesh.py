@@ -11,6 +11,16 @@ import numpy as np
 import os
 from datetime import datetime
 
+import pytorch3d
+from pytorch3d.structures import Meshes
+from pytorch3d.io import load_obj
+
+device = torch.device("cuda:0")
+verts, faces, aux = load_obj("conf/rigidcloth/drag/final_target_cloth.obj")
+faces_idx = faces.verts_idx.to(device)
+verts = verts.to(device)
+ref_target_cloth_mesh = Meshes(verts=[verts], faces=[faces_idx])
+
 handles = [25, 60, 30, 54]
 
 print(sys.argv)
@@ -40,9 +50,6 @@ class Net(nn.Module):
 
 with open('conf/rigidcloth/drag/drag.json','r') as f:
 	config = json.load(f)
-# matfile = config['cloths'][0]['materials'][0]['data']
-# with open(matfile,'r') as f:
-# 	matconfig = json.load(f)
 
 def save_config(config, file):
 	with open(file,'w') as f:
@@ -56,29 +63,22 @@ spf = config['frame_steps']
 
 scalev=1
 
-def reset_sim(sim, epoch, goal):
-	if epoch % 5==0:
-		arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
-		text_name = out_path+'/out%d'%epoch + "/goal.txt"
-		np.savetxt(text_name, goal[3:6], delimiter=',')
-	else:
-		arcsim.init_physics(out_path+'/conf.json',out_path+'/out',False)
+def reset_sim(sim, epoch):
+    arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
 
+def get_loss(sim):
+    loss = 0
+    node_number = verts.shape[0]
+    for i in range(node_number):
+        vertex_loss = torch.norm(verts.cpu()[i]-(sim.cloths[0].mesh.nodes[i].x))**2
+        loss += vertex_loss
+    loss /= node_number
 
-# def get_loss(ans, goal):
-# 	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-# 	dif = ans - goal
-# 	loss = torch.norm(dif.narrow(0, 3, 3), p=2)
+    return loss
 
-# 	return loss
-def get_loss(ans, goal):
-	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-	diff = ans - goal
-	loss = torch.norm(diff.narrow(0, 3, 3), p=2)
-
-	return loss
-
-def run_sim(steps, sim, net, goal):
+def run_sim(steps, sim, net):
+    #for param in net.parameters():
+    #    print(param.grad)
     for obstacle in sim.obstacles:
     	for node in obstacle.curr_state_mesh.nodes:
     		node.m    *= 0.2
@@ -102,22 +102,9 @@ def run_sim(steps, sim, net, goal):
         
         arcsim.sim_step()
     
-    cnt = 0
-    ans1 = torch.tensor([0, 0, 0],dtype=torch.float64)
-    for node in sim.cloths[0].mesh.nodes:
-    	cnt += 1
-    	ans1 = ans1 + node.x
-    ans1 /= cnt
+    loss = get_loss(sim)
     
-    ans1 = torch.cat([torch.tensor([0, 0, 0],dtype=torch.float64),
-    						ans1])
-    
-    # ans  = ans1
-    ans = sim.obstacles[0].curr_state_mesh.dummy_node.x
-    
-    loss = get_loss(ans1, goal)
-    
-    return loss, ans
+    return loss
 
 def do_train(cur_step,optimizer,sim,net):
 	epoch = 0
@@ -125,22 +112,10 @@ def do_train(cur_step,optimizer,sim,net):
 		# steps = int(1*15*spf)
 		steps = 20
 
-		sigma = 0.05
-		z = np.random.random()*sigma + 0.5
-
-		y = np.random.random()*sigma - sigma/2
-		x = np.random.random()*sigma - sigma/2
-
-
-		ini_co = torch.tensor([0.0000, 0.0000, 0.0000,0.4744, 0.4751, 0.0564], dtype=torch.float64)
-		goal = torch.tensor([0.0000, 0.0000, 0.0000,
-		 0, 0, z],dtype=torch.float64)
-		goal = goal + ini_co
-
-		reset_sim(sim, epoch, goal)
+		reset_sim(sim, epoch)
 
 		st = time.time()
-		loss, ans = run_sim(steps, sim, net, goal)
+		loss = run_sim(steps, sim, net)
 		en0 = time.time()
 		
 		optimizer.zero_grad()
@@ -149,9 +124,7 @@ def do_train(cur_step,optimizer,sim,net):
 
 		en1 = time.time()
 		print("=======================================")
-		f.write('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		print('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		#print('epoch {}: loss={}  ans={}\n'.format(epoch, loss.data, ans.data))
+		print('epoch {}: loss={}\n'.format(epoch, loss.data))
 
 		print('forward tim = {}'.format(en0-st))
 		print('backward time = {}'.format(en1-en0))

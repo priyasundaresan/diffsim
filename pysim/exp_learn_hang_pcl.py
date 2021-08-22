@@ -11,7 +11,25 @@ import numpy as np
 import os
 from datetime import datetime
 
-handles = [25, 60, 30, 54]
+import pytorch3d
+from pytorch3d.structures import Meshes
+from pytorch3d.io import load_obj
+from pytorch3d.ops import sample_points_from_meshes
+from pytorch3d.loss import (
+    chamfer_distance, 
+)
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+device = torch.device("cuda:0")
+verts, faces, aux = load_obj("conf/rigidcloth/cloth_hang/final_cloth_pole.obj")
+faces_idx = faces.verts_idx.to(device)
+verts = verts.to(device)
+ref_target_mesh = Meshes(verts=[verts], faces=[faces_idx])
+
+handles = [44]
 
 print(sys.argv)
 if len(sys.argv)==1:
@@ -38,11 +56,8 @@ class Net(nn.Module):
 		# x = torch.clamp(x, min=-5, max=5)
 		return x
 
-with open('conf/rigidcloth/drag/drag.json','r') as f:
+with open('conf/rigidcloth/cloth_hang/start.json','r') as f:
 	config = json.load(f)
-# matfile = config['cloths'][0]['materials'][0]['data']
-# with open(matfile,'r') as f:
-# 	matconfig = json.load(f)
 
 def save_config(config, file):
 	with open(file,'w') as f:
@@ -56,33 +71,49 @@ spf = config['frame_steps']
 
 scalev=1
 
-def reset_sim(sim, epoch, goal):
-	if epoch % 5==0:
-		arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
-		text_name = out_path+'/out%d'%epoch + "/goal.txt"
-		np.savetxt(text_name, goal[3:6], delimiter=',')
-	else:
-		arcsim.init_physics(out_path+'/conf.json',out_path+'/out',False)
+def reset_sim(sim, epoch):
+    arcsim.init_physics(out_path+'/conf.json', out_path+'/out%d'%epoch,False)
 
+def plot_pointcloud(points, title=""):
+    x, z, y = points.clone().detach().cpu().squeeze().unbind(1)    
+    fig = plt.figure(figsize=(5, 5))
+    ax = Axes3D(fig)
+    ax.scatter3D(x, z, y, s=0.15)
+    ax.set_xlabel('x')
+    ax.set_ylabel('z')
+    ax.set_zlabel('y')
+    ax.set_title(title)
+    ax.view_init(100, 30)
+    plt.savefig(title)
+    plt.clf()
+    #plt.show()
 
-# def get_loss(ans, goal):
-# 	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-# 	dif = ans - goal
-# 	loss = torch.norm(dif.narrow(0, 3, 3), p=2)
+def get_render_mesh_from_sim(sim):
+    cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
+    cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
 
-# 	return loss
-def get_loss(ans, goal):
-	#[0.0000, 0.0000, 0.0000, 0.7500, 0.6954, 0.3159
-	diff = ans - goal
-	loss = torch.norm(diff.narrow(0, 3, 3), p=2)
+    pole_verts = torch.stack([v.node.x for v in sim.obstacles[1].curr_state_mesh.verts]).float().to(device)
+    pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[1].curr_state_mesh.faces]).to(device)
+    pole_faces += len(cloth_verts)
 
-	return loss
+    all_verts = [cloth_verts, pole_verts]
+    all_faces = [cloth_faces, pole_faces]
 
-def run_sim(steps, sim, net, goal):
-    for obstacle in sim.obstacles:
-    	for node in obstacle.curr_state_mesh.nodes:
-    		node.m    *= 0.2
-    
+    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
+    return mesh
+
+def get_loss(sim, epoch):
+    curr_mesh = get_render_mesh_from_sim(sim)
+    sample_trg = sample_points_from_meshes(ref_target_mesh, 5000)
+    sample_src = sample_points_from_meshes(curr_mesh, 5000)
+    if epoch == 0:
+        plot_pointcloud(sample_trg, title='%s/ref.png'%out_path)
+    if epoch % 2 == 0:
+        plot_pointcloud(sample_src, title='%s/epoch%02d'%(out_path,epoch))
+    loss_chamfer, _ = chamfer_distance(sample_trg, sample_src)
+    return loss_chamfer
+
+def run_sim(steps, sim, net, epoch):
     for step in range(steps):
         print(step)
         remain_time = torch.tensor([(steps - step)/steps],dtype=torch.float64)
@@ -96,51 +127,25 @@ def run_sim(steps, sim, net, goal):
         net_output = net(torch.cat(net_input))
         
         for i in range(len(handles)):
-            sim_input = torch.cat([torch.tensor([0, 0],dtype=torch.float64), net_output[i].view([1])])
-            #print(sim_input.grad)
+            sim_input = torch.cat([torch.tensor([0],dtype=torch.float64), net_output])
             sim.cloths[0].mesh.nodes[handles[i]].v += sim_input 
-        
+
         arcsim.sim_step()
     
-    cnt = 0
-    ans1 = torch.tensor([0, 0, 0],dtype=torch.float64)
-    for node in sim.cloths[0].mesh.nodes:
-    	cnt += 1
-    	ans1 = ans1 + node.x
-    ans1 /= cnt
+    loss = get_loss(sim, epoch)
     
-    ans1 = torch.cat([torch.tensor([0, 0, 0],dtype=torch.float64),
-    						ans1])
-    
-    # ans  = ans1
-    ans = sim.obstacles[0].curr_state_mesh.dummy_node.x
-    
-    loss = get_loss(ans1, goal)
-    
-    return loss, ans
+    return loss
 
 def do_train(cur_step,optimizer,sim,net):
 	epoch = 0
 	while True:
 		# steps = int(1*15*spf)
-		steps = 20
+		steps = 30
 
-		sigma = 0.05
-		z = np.random.random()*sigma + 0.5
-
-		y = np.random.random()*sigma - sigma/2
-		x = np.random.random()*sigma - sigma/2
-
-
-		ini_co = torch.tensor([0.0000, 0.0000, 0.0000,0.4744, 0.4751, 0.0564], dtype=torch.float64)
-		goal = torch.tensor([0.0000, 0.0000, 0.0000,
-		 0, 0, z],dtype=torch.float64)
-		goal = goal + ini_co
-
-		reset_sim(sim, epoch, goal)
+		reset_sim(sim, epoch)
 
 		st = time.time()
-		loss, ans = run_sim(steps, sim, net, goal)
+		loss = run_sim(steps, sim, net, epoch)
 		en0 = time.time()
 		
 		optimizer.zero_grad()
@@ -149,9 +154,7 @@ def do_train(cur_step,optimizer,sim,net):
 
 		en1 = time.time()
 		print("=======================================")
-		f.write('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		print('epoch {}: loss={}\n  ans = {}\n goal = {}\n'.format(epoch, loss.data,  ans.narrow(0,3,3).data, goal.data))
-		#print('epoch {}: loss={}  ans={}\n'.format(epoch, loss.data, ans.data))
+		print('epoch {}: loss={}\n'.format(epoch, loss.data))
 
 		print('forward tim = {}'.format(en0-st))
 		print('backward time = {}'.format(en1-en0))
@@ -176,7 +179,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	# reset_sim(sim)
 
 	#param_g = torch.tensor([0,0,0,0,0,1],dtype=torch.float64, requires_grad=True)
-	net = Net(25, 4)
+	net = Net(len(handles)*6 + 1, len(handles)*2)
 	if os.path.exists(torch_model_path):
 		net.load_state_dict(torch.load(torch_model_path))
 		print("load: %s\n success" % torch_model_path)
