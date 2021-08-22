@@ -177,11 +177,11 @@ if __name__ == '__main__':
     render_size = (640,640)
     #set_render_settings('BLENDER_EEVEE', render_size)
     set_render_settings('CYCLES', render_size)
-    render_rollout('default_out', 'out%d'%0, 100, offset=0)
-    #offset = 0
-    #episode_length = 25
-    #num_train_epochs = 25
-    #step = 5
-    #for i in range(0,num_train_epochs,step):
-    #    render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
-    #    offset += episode_length
+    #render_rollout('default_out', 'out%d'%0, 50, offset=0)
+    offset = 0
+    episode_length = 30
+    num_train_epochs = 225
+    step = 10
+    for i in range(0,num_train_epochs,step):
+        render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
+        offset += episode_length
