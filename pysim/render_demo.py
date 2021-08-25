@@ -24,13 +24,21 @@ from pytorch3d.renderer import (
     MeshRenderer, 
     MeshRasterizer,  
     SoftPhongShader,
+    SoftGouraudShader,
     TexturesUV,
     TexturesVertex
 )
 
 device = torch.device("cuda:0")
 
-lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
+#lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
+lights = None
+
+R, T = look_at_view_transform(1.25, -60, 0) 
+
+#R, T = look_at_view_transform(1.25, 300, 0) 
+#T[0][0] += 0.4
+#T[0][1] -= 0.1
 
 #R, T = look_at_view_transform(1.25, 300, 0) 
 #T[0][0] += 0.4
@@ -40,17 +48,17 @@ lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
 #T[0][0] += 0.5
 #T[0][1] += 0.05
 
-R, T = look_at_view_transform(1, 300, 0) 
-T[0][0] += 0.5
-T[0][1] -= 0.1
+#R, T = look_at_view_transform(1, 300, 0) 
+#T[0][0] += 0.5
+#T[0][1] -= 0.1
 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
 
 raster_settings = RasterizationSettings(
-    image_size=300, 
+    image_size=128, 
     blur_radius=0.0, 
     faces_per_pixel=1, 
-    perspective_correct=False
+    perspective_correct=True
 )
 
 renderer = MeshRenderer(
@@ -58,7 +66,7 @@ renderer = MeshRenderer(
         cameras=camera, 
         raster_settings=raster_settings
     ),
-    shader=SoftPhongShader(
+    shader=SoftGouraudShader(
         device=device, 
         cameras=camera,
         lights=lights
@@ -66,8 +74,8 @@ renderer = MeshRenderer(
 )
 
 
-num_frames = 20
-demo_length = 20
+num_frames = 30
+demo_length = 30
 step = demo_length//num_frames
 out_dir = 'demo_video_frames'
 if not os.path.exists(out_dir):
@@ -79,8 +87,9 @@ for i in range(0, demo_length, step):
     all_faces = []
     all_textures = []
     vert_count = 0
-    colors = torch.Tensor([[1,0,0], [0,1,0], [0,0,1]])
-    for j, f in enumerate(mesh_fnames[:1]):
+    colors = torch.Tensor([[0,0,1], [0,1,0], [1,0,0]])
+    #for j, f in enumerate(mesh_fnames[:1]):
+    for j, f in enumerate(mesh_fnames):
         verts, faces, aux = load_obj(os.path.join("default_out", "out0", f))
         faces_idx = faces.verts_idx.to(device) + vert_count
         verts = verts.to(device)

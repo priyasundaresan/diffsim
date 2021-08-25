@@ -22,10 +22,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-demo_length = 30
+demo_length = 35
 step = 1
 out_dir = 'demo_pcl_frames'
-num_points = 5000
+num_points = 125000
 
 def plot_pointcloud(points, title=""):
     x, z, y = points.clone().detach().cpu().squeeze().unbind(1)    
@@ -57,9 +57,9 @@ def sim_objs_to_pcls(sim_dir='default_out'):
             all_verts.append(verts)
             all_faces.append(faces_idx)
         mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
-        sample_pcl = sample_points_from_meshes(mesh, 5000)
+        sample_pcl = sample_points_from_meshes(mesh, num_points)
         np.save(os.path.join(out_dir, '%03d.npy'%i), sample_pcl)
-        plot_pointcloud(sample_pcl)
+        #plot_pointcloud(sample_pcl)
         #break
 if __name__ == '__main__':
     sim_objs_to_pcls()

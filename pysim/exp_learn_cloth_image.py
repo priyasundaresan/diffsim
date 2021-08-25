@@ -46,17 +46,24 @@ T[0][1] -= 0.1
 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
 
-raster_settings = RasterizationSettings(
+#raster_settings = RasterizationSettings(
+#    image_size=300, 
+#    blur_radius=0.0, 
+#    faces_per_pixel=1, 
+#    perspective_correct=False
+#)
+sigma = 1e-5
+raster_settings_soft = RasterizationSettings(
     image_size=300, 
-    blur_radius=0.0, 
-    faces_per_pixel=1, 
-    perspective_correct=False
+    blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+    faces_per_pixel=150, 
+    perspective_correct=True
 )
 
 renderer = MeshRenderer(
     rasterizer=MeshRasterizer(
         cameras=camera, 
-        raster_settings=raster_settings
+        raster_settings=raster_settings_soft
     ),
     shader=SoftPhongShader(
         device=device, 
@@ -144,6 +151,8 @@ def get_loss_per_iter(sim, epoch, sim_iter):
     return loss
 
 def run_sim(steps, sim, net, epoch):
+    for param in net.parameters():
+        print(torch.median(torch.abs(param.grad)).item() if param.grad is not None else None)
 
     #for param in net.parameters():
     #    print(param.grad)
@@ -165,8 +174,7 @@ def run_sim(steps, sim, net, epoch):
         net_output = net(torch.cat(net_input))
         
         for i in range(len(handles)):
-            sim_input = torch.cat([torch.tensor([0, 0],dtype=torch.float64), net_output[i].view([1])])
-            #print(sim_input.grad)
+            sim_input = torch.cat([torch.tensor([0, 0],dtype=torch.float64), net_output[i].view(1)])
             sim.cloths[0].mesh.nodes[handles[i]].v += sim_input 
         
         arcsim.sim_step()
@@ -221,6 +229,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 		print("load: %s\n success" % torch_model_path)
 
 	lr = 0.01
+	#lr = 0.1
 	momentum = 0.9
 	f.write('lr={} momentum={}\n'.format(lr,momentum))
 	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum)

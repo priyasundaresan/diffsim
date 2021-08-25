@@ -61,9 +61,13 @@ def test_sysid_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start.json'),'default_out/out0',False)
-    orig = sim.cloths[0].materials[0].stretching
+    #orig = sim.cloths[0].materials[0].stretching
+    print(dir(sim.cloths[0]))
     #sim.cloths[0].materials[0].stretching = orig*0.05
-    sim.cloths[0].materials[0].stretching = orig*0.03
+    #sim.cloths[0].materials[0].stretching = orig*0.03
+    #sim.cloths[0].materials[0].stretching = orig*0.01
+    #sim.gravity = torch.Tensor([0,0,-9.8])
+    #sim.gravity = torch.Tensor([0,0,-2.0])
     for step in range(20):
         arcsim.sim_step()
 
@@ -83,10 +87,10 @@ def test_cloth_hang_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast.json'),'default_out/out0',False)
-    #for step in range(500):
-    #for step in range(250):
-    for step in range(30):
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast_longer.json'),'default_out/out0',False)
+    #for step in range(30):
+    for step in range(35):
         print(step)
         arcsim.sim_step()
 
@@ -94,8 +98,8 @@ def test_mask_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/mask/demo.json'),'default_out/out0',False)
-    for step in range(500):
+    arcsim.init_physics(os.path.join('conf/rigidcloth/mask/demo_fast.json'),'default_out/out0',False)
+    for step in range(18):
         print(step)
         arcsim.sim_step()
 
@@ -111,9 +115,11 @@ def test_drag_demo():
         arcsim.sim_step()
 
 if __name__ == '__main__':
+    #test_sysid_sim()
+    #test_mask_sim()
+    test_cloth_hang_sim()
+
     #test_drag_demo()
     #test_sysid_sim()
     #test_triangle_fold_sim()
-    #test_mask_sim()
-    test_cloth_hang_sim()
     #test_triangle_fold_sim()

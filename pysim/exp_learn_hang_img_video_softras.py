@@ -11,19 +11,25 @@ import numpy as np
 import os
 from datetime import datetime
 
-import pytorch3d
-from pytorch3d.structures import Meshes
-from pytorch3d.io import load_obj
-from pytorch3d.ops import sample_points_from_meshes
-from pytorch3d.loss import (
-    chamfer_distance, 
-)
+import soft_renderer as sr
+import cv2
+import matplotlib.image as mpimg
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 device = torch.device("cuda:0")
+
+camera_distance = 1.25
+elevation = 20
+azimuth = -20
+
+transform = sr.LookAt()
+lighting = sr.Lighting()
+rasterizer = sr.SoftRasterizer(image_size=64, sigma_val=1e-4, aggr_func_rgb='hard')
+
+criterion = torch.nn.MSELoss(reduction='mean')
 
 handles = [44]
 
@@ -34,7 +40,6 @@ else:
 	out_path = sys.argv[1]
 if not os.path.exists(out_path):
 	os.mkdir(out_path)
-
 timestamp = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
 torch_model_path = out_path + ('/net_weight.pth%s'%timestamp)
@@ -90,34 +95,55 @@ def plot_pointcloud(points, title=""):
     #plt.show()
 
 def get_render_mesh_from_sim(sim):
+    colors = torch.Tensor([[0,0,1], [0,1,0], [1,0,0]])
     cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
     cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
+    cloth_rgb = torch.ones_like(cloth_verts) # (V, 3)
+    cloth_rgb[:,] = colors[0]
+
+    ground_verts = torch.stack([v.node.x for v in sim.obstacles[0].curr_state_mesh.verts]).float().to(device)
+    ground_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[0].curr_state_mesh.faces]).to(device)
+    ground_faces += len(cloth_verts)
+    ground_rgb = torch.ones_like(ground_verts) # (V, 3)
+    ground_rgb[:,] = colors[1]
 
     pole_verts = torch.stack([v.node.x for v in sim.obstacles[1].curr_state_mesh.verts]).float().to(device)
     pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[1].curr_state_mesh.faces]).to(device)
-    pole_faces += len(cloth_verts)
+    pole_faces += len(cloth_verts) + len(ground_verts)
+    pole_rgb = torch.ones_like(pole_verts) # (V, 3)
+    pole_rgb[:,] = colors[2]
 
-    all_verts = [cloth_verts, pole_verts]
-    all_faces = [cloth_faces, pole_faces]
+    tex = torch.cat([cloth_rgb, ground_rgb, pole_rgb])
+    vertices = torch.cat([cloth_verts, ground_verts, pole_verts])
+    vertices = torch.stack((vertices[:,0], vertices[:,2], vertices[:,1])).T
+    vertices = vertices.unsqueeze(0)
+    faces = torch.cat([cloth_faces, ground_faces, pole_faces]).unsqueeze(0)
 
-    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
+    mesh = sr.Mesh(vertices=vertices, faces=faces, textures=tex, texture_type='vertex')
+    mesh = lighting(mesh)
+    transform.set_eyes_from_angles(camera_distance, elevation, azimuth)
+    mesh = transform(mesh)
     return mesh
 
 def get_loss_per_iter(sim, epoch, sim_step):
     curr_mesh = get_render_mesh_from_sim(sim)
-    curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
-    ref_pcl = torch.from_numpy(np.load('demo_hang_pcl/%03d.npy'%sim_step)).to(device)
-    loss_chamfer, _ = chamfer_distance(ref_pcl, curr_pcl)
-    if epoch % 5 == 0:
-        plot_pointcloud(curr_pcl, title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
-    return loss_chamfer
+    curr_image = rasterizer(curr_mesh).squeeze().permute(1,2,0)[...,:3]
+    ref_image = mpimg.imread('demo_exp_learn_hang_img_video_softras/%03d.jpg'%sim_step)
+    ref_image = torch.from_numpy(ref_image)[...,:3].to(device)/255.
+    if epoch % 1 == 0:
+        visualization = np.hstack((curr_image.detach().cpu().numpy(), ref_image.detach().cpu().numpy()))
+        #cv2.imshow('img', visualization)
+        #cv2.waitKey(0)
+        cv2.imwrite('%s/epoch%03d-%03d.jpg'%(out_path, epoch, sim_step), visualization*255)
+
+    loss = criterion(curr_image, ref_image) 
+    return loss
 
 def run_sim(steps, sim, net, epoch):
     loss = 0
     for param in net.parameters():
         print(torch.median(torch.abs(param.grad)).item() if param.grad is not None else None)
     for step in range(steps):
-        print(step)
         remain_time = torch.tensor([(total_steps - step)/total_steps],dtype=torch.float64)
         
         net_input = []
@@ -191,7 +217,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	lr = 0.01
 	momentum = 0.9
 	f.write('lr={} momentum={}\n'.format(lr,momentum))
-	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum)
+	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum
 	optimizer = torch.optim.Adam(net.parameters(),lr=lr)
 	# optimizer = torch.optim.Adadelta([density, stretch, bend])
 	for cur_step in range(tot_step):

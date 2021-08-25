@@ -11,20 +11,47 @@ import numpy as np
 import os
 from datetime import datetime
 
+import cv2
+
 import pytorch3d
-from pytorch3d.structures import Meshes
+from pytorch3d.structures import Meshes, Pointclouds
 from pytorch3d.io import load_obj
 from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import (
     chamfer_distance, 
 )
+from pytorch3d.renderer import (
+    look_at_view_transform,
+    FoVOrthographicCameras, 
+    FoVPerspectiveCameras, 
+    PointsRasterizationSettings,
+    PointsRenderer,
+    PulsarPointsRenderer,
+    PointsRasterizer,
+    AlphaCompositor,
+    NormWeightedCompositor
+)
+
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 device = torch.device("cuda:0")
+R, T = look_at_view_transform(1.25, -60, 0) 
+cameras = FoVPerspectiveCameras(device=device, R=R, T=T)
+raster_settings = PointsRasterizationSettings(
+    image_size=200, 
+    radius = 0.015,
+    points_per_pixel = 150
+)
+rasterizer = PointsRasterizer(cameras=cameras, raster_settings=raster_settings)
+renderer = PointsRenderer(
+    rasterizer=rasterizer,
+    compositor=AlphaCompositor()
+)
 
+criterion = torch.nn.MSELoss(reduction='mean')
 handles = [44]
 
 print(sys.argv)
@@ -64,8 +91,8 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 30
-num_points = 5000
+total_steps = 35
+num_points = 125000
 
 scalev=1
 
@@ -106,11 +133,35 @@ def get_render_mesh_from_sim(sim):
 def get_loss_per_iter(sim, epoch, sim_step):
     curr_mesh = get_render_mesh_from_sim(sim)
     curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
-    ref_pcl = torch.from_numpy(np.load('demo_hang_pcl/%03d.npy'%sim_step)).to(device)
-    loss_chamfer, _ = chamfer_distance(ref_pcl, curr_pcl)
-    if epoch % 5 == 0:
-        plot_pointcloud(curr_pcl, title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
-    return loss_chamfer
+    ref_pcl = torch.from_numpy(np.load('demo_exp_learn_hang_proj_video/%03d.npy'%sim_step)).to(device)
+
+    verts = curr_pcl.squeeze()
+    rgb = torch.ones((len(verts),4)).to(device)
+    depths = verts[:,2]
+    d_max, d_min = depths.max(), depths.min()
+    depths = (depths - d_min) / (d_max - d_min)
+    rgb[:,:3] *= depths.repeat(3,1).T
+    point_cloud = Pointclouds(points=[verts], features=[rgb])
+    img_curr = renderer(point_cloud)[0, ..., :3]
+
+    verts = ref_pcl.squeeze()
+    rgb = torch.ones((len(verts),4)).to(device)
+    depths = verts[:,2]
+    d_max, d_min = depths.max(), depths.min()
+    depths = (depths - d_min) / (d_max - d_min)
+    rgb[:,:3] *= depths.repeat(3,1).T
+    point_cloud = Pointclouds(points=[verts], features=[rgb])
+    img_ref = renderer(point_cloud)[0, ..., :3]
+
+    if epoch % 1 == 0:
+        visualization = np.hstack((img_curr.detach().cpu().numpy(), img_ref.detach().cpu().numpy()))
+        cv2.imwrite('%s/epoch%03d-%03d.jpg'%(out_path, epoch, sim_step), visualization*255)
+
+    #loss, _ = chamfer_distance(ref_pcl, curr_pcl)
+    #if epoch % 5 == 0:
+    #    plot_pointcloud(curr_pcl, title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
+    loss = criterion(img_curr, img_ref) 
+    return loss
 
 def run_sim(steps, sim, net, epoch):
     loss = 0
@@ -142,7 +193,7 @@ def run_sim(steps, sim, net, epoch):
 def do_train(cur_step,optimizer,sim,net):
     epoch = 0
     loss = float('inf')
-    thresh = 0.005
+    thresh = 0.015
     num_steps_to_run = 1
     while True:
         

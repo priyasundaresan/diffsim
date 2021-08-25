@@ -77,8 +77,8 @@ def get_loss(sim):
     return loss
 
 def run_sim(steps, sim, net):
-    #for param in net.parameters():
-    #    print(param.grad)
+    for param in net.parameters():
+        print(torch.median(torch.abs(param.grad)).item() if param.grad is not None else None)
     for obstacle in sim.obstacles:
     	for node in obstacle.curr_state_mesh.nodes:
     		node.m    *= 0.2

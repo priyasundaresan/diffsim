@@ -25,7 +25,7 @@ import matplotlib as mpl
 
 device = torch.device("cuda:0")
 
-handles = [44]
+handles = [74,77]
 
 print(sys.argv)
 if len(sys.argv)==1:
@@ -52,7 +52,7 @@ class Net(nn.Module):
 		# x = torch.clamp(x, min=-5, max=5)
 		return x
 
-with open('conf/rigidcloth/cloth_hang/start.json','r') as f:
+with open('conf/rigidcloth/mask/start.json','r') as f:
 	config = json.load(f)
 
 def save_config(config, file):
@@ -64,7 +64,7 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 30
+total_steps = 18
 num_points = 5000
 
 scalev=1
@@ -106,7 +106,7 @@ def get_render_mesh_from_sim(sim):
 def get_loss_per_iter(sim, epoch, sim_step):
     curr_mesh = get_render_mesh_from_sim(sim)
     curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
-    ref_pcl = torch.from_numpy(np.load('demo_hang_pcl/%03d.npy'%sim_step)).to(device)
+    ref_pcl = torch.from_numpy(np.load('demo_pcl_mask/%03d.npy'%sim_step)).to(device)
     loss_chamfer, _ = chamfer_distance(ref_pcl, curr_pcl)
     if epoch % 5 == 0:
         plot_pointcloud(curr_pcl, title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
@@ -114,8 +114,6 @@ def get_loss_per_iter(sim, epoch, sim_step):
 
 def run_sim(steps, sim, net, epoch):
     loss = 0
-    for param in net.parameters():
-        print(torch.median(torch.abs(param.grad)).item() if param.grad is not None else None)
     for step in range(steps):
         print(step)
         remain_time = torch.tensor([(total_steps - step)/total_steps],dtype=torch.float64)
@@ -129,7 +127,9 @@ def run_sim(steps, sim, net, epoch):
         net_output = net(torch.cat(net_input))
         
         for i in range(len(handles)):
-            sim_input = torch.cat([torch.tensor([0],dtype=torch.float64), net_output])
+            sim_input = net_output
+            if i == 1:
+                sim_input[0] *= -1
             sim.cloths[0].mesh.nodes[handles[i]].v += sim_input 
 
         arcsim.sim_step()
@@ -183,17 +183,15 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	sim=arcsim.get_sim()
 	# reset_sim(sim)
 
-	net = Net(len(handles)*6 + 1, len(handles)*2)
+	net = Net(len(handles)*6 + 1, 3)
 	if os.path.exists(torch_model_path):
 		net.load_state_dict(torch.load(torch_model_path))
 		print("load: %s\n success" % torch_model_path)
 
-	lr = 0.01
+	lr = 0.02
 	momentum = 0.9
 	f.write('lr={} momentum={}\n'.format(lr,momentum))
-	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum)
 	optimizer = torch.optim.Adam(net.parameters(),lr=lr)
-	# optimizer = torch.optim.Adadelta([density, stretch, bend])
 	for cur_step in range(tot_step):
 		do_train(cur_step,optimizer,sim,net)
 
