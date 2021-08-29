@@ -44,11 +44,14 @@ def set_viewport_shading(mode):
                 space.shading.type = mode
 
 def add_camera_light():
-    bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,3))
+    bpy.ops.object.light_add(type='SUN', radius=10, location=(0,0,3))
     bpy.ops.object.light_add(type='POINT', location=(0,-1,0.5))
     
+    bpy.ops.object.camera_add(location=(-0.5,-2,1.5), rotation=(np.pi/(3.2),0,0))
     #bpy.ops.object.camera_add(location=(-0.5,-2,0), rotation=(np.pi/2.2,0,0))
-    bpy.ops.object.camera_add(location=(-2.87,-1.416,0.22), rotation=(np.radians(81.8),0,np.radians(-57.5)))
+    #bpy.ops.object.camera_add(location=(-0.5,-2,0.5), rotation=(np.pi/2.2,0,0))
+    #bpy.ops.object.camera_add(location=(0,-2,0.5), rotation=(np.pi/2.2,0,0))
+    #bpy.ops.object.camera_add(location=(-2.87,-1.416,0.22), rotation=(np.radians(81.8),0,np.radians(-57.5)))
     bpy.context.scene.camera = bpy.context.object
     return bpy.context.object
 
@@ -66,7 +69,9 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.render.resolution_y = render_height
     scene.use_nodes = True
     scene.render.image_settings.file_format='PNG'
-    scene.view_settings.exposure = 2.5
+    #scene.view_settings.exposure = 2.5
+    #scene.view_settings.exposure = 4.5
+    scene.view_settings.exposure = 3
     if engine == 'BLENDER_WORKBENCH':
         scene.render.image_settings.color_mode = 'RGB'
         scene.display_settings.display_device = 'None'
@@ -116,15 +121,15 @@ def load_objs(objs_dir, episode):
     objs_fnames = [f for f in os.listdir(objs_dir) if ((f[-3:] == 'obj') and (f[:3] != 'obs') and (int(f[:4]) == episode))]
     objs = []
     #COLORS = [(0.3,0,0.1,1), (0,0.0,0.1,1), (0,0,0.3,1)]
-    COLORS = [(0.3,0,0.1,0.1), (0,0.0,0.1,1), (0,0,0.3,1)]
+    COLORS = [(0.3,0,0.1,0.1), (0,0,0.1,1), (0,0.3,0.3,1)]
     
     for i, fname in enumerate(sorted(objs_fnames)):
         color = COLORS[i]
         bpy.ops.import_scene.obj(filepath=os.path.join(objs_dir, fname))
         obj = bpy.context.selected_objects[0]
         bpy.context.view_layer.objects.active = obj
-        bpy.ops.object.modifier_add(type='SUBSURF')
-        bpy.context.object.modifiers["Subdivision"].levels=2 # Smooths the cloth so it doesn't look blocky
+        #bpy.ops.object.modifier_add(type='SUBSURF')
+        #bpy.context.object.modifiers["Subdivision"].levels=1 # Smooths the cloth so it doesn't look blocky
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers["Solidify"].thickness = 0.003
         colorize(obj, color, transparent=(i==0))
@@ -177,11 +182,16 @@ if __name__ == '__main__':
     render_size = (640,640)
     #set_render_settings('BLENDER_EEVEE', render_size)
     set_render_settings('CYCLES', render_size)
-    #render_rollout('default_out', 'out%d'%0, 50, offset=0)
+    #render_rollout('default_out', 'out%d'%0, 18, offset=0)
     offset = 0
-    episode_length = 30
-    num_train_epochs = 225
-    step = 10
+    episode_length = 40
+    #num_train_epochs = 61
+    num_train_epochs = 91
+    step = 5
+
+    num_objs = 2 # cloth, plane, hook
     for i in range(0,num_train_epochs,step):
+        episode_length = (len(os.listdir(os.path.join('..', 'default_out', 'out%d'%i))) - 3)//num_objs
+        print(episode_length)
         render_rollout('default_out', 'out%d'%i, episode_length, offset=offset)
         offset += episode_length

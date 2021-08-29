@@ -45,16 +45,26 @@ def test_tshirt_xy_sim():
         print(step)
         arcsim.sim_step()
 
+#def test_tshirt_sim():
+#    if not os.path.exists('default_out'):
+#        os.mkdir('default_out')
+#    sim = arcsim.get_sim()
+#    #arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt.json'),'default_out/out0',False)
+#    arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt_start_pinned.json'),'default_out/out0',False)
+#    #sim.cloths[0].materials[0].damping = torch.Tensor([0.5])
+#    for step in range(300):
+#        print(step)
+#        arcsim.sim_step()
+
 def test_tshirt_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    #arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt.json'),'default_out/out0',False)
-    arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt_start_pinned.json'),'default_out/out0',False)
-    #sim.cloths[0].materials[0].damping = torch.Tensor([0.5])
-    for step in range(300):
+    arcsim.init_physics(os.path.join('conf/rigidcloth/clothing/tshirt.json'),'default_out/out0',False)
+    for step in range(30):
         print(step)
         arcsim.sim_step()
+
 
 def test_sysid_sim():
     if not os.path.exists('default_out'):
@@ -88,9 +98,11 @@ def test_cloth_hang_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast.json'),'default_out/out0',False)
-    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast_longer.json'),'default_out/out0',False)
     #for step in range(30):
-    for step in range(35):
+    #    arcsim.sim_step()
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles.json'),'default_out/out0',False)
+    for step in range(40):
         print(step)
         arcsim.sim_step()
 
@@ -114,12 +126,137 @@ def test_drag_demo():
             sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([0,0,7]).double()
         arcsim.sim_step()
 
+def test_belt_demo():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/wrap/demo_fast.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/wrap/demo.json'),'default_out/out0',False)
+    handles = [14,15]
+
+    for step in range(10):
+        print(step)
+        for i in range(len(handles)):
+            sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([4.75,0,0.3]).double()
+        arcsim.sim_step()
+    for step in range(15):
+        print(step)
+        for i in range(len(handles)):
+            sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([1.5,0.2,0.3]).double()
+        arcsim.sim_step()
+    for step in range(10):
+        print(step)
+        for i in range(len(handles)):
+            sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([-2,0.5,-0.4]).double()
+        arcsim.sim_step()
+    for step in range(5):
+        print(step)
+        for i in range(len(handles)):
+            sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([-7.5,0.4,-0.05]).double()
+        arcsim.sim_step()
+    for step in range(10):
+        for i in range(len(handles)):
+            sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([-1,1,-0.2]).double()
+        arcsim.sim_step()
+
+
+    #for step in range(10):
+    #    print(step)
+    #    for i in range(len(handles)):
+    #        sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([1.0,0,0.3]).double()
+    #    arcsim.sim_step()
+    #for step in range(15):
+    #    print(step)
+    #    for i in range(len(handles)):
+    #        sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([1.5,0.2,0.3]).double()
+    #    arcsim.sim_step()
+    #for step in range(10):
+    #    print(step)
+    #    for i in range(len(handles)):
+    #        sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([-2,0.5,-0.4]).double()
+    #    arcsim.sim_step()
+    #for step in range(5):
+    #    print(step)
+    #    for i in range(len(handles)):
+    #        sim.cloths[0].mesh.nodes[handles[i]].v += torch.Tensor([-7.5,0.4,-0.05]).double()
+    #    arcsim.sim_step()
+
+#def test_twoin_fold_demo():
+#    if not os.path.exists('default_out'):
+#        os.mkdir('default_out')
+#    sim = arcsim.get_sim()
+#    arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
+#    #handles = [0,1,2,3]
+#    #handles = [0]
+#    for step in range(5):
+#        arcsim.sim_step()
+#    for step in range(20):
+#        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([7,7,1]).double()
+#        sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-7,-7,1]).double()
+#        arcsim.sim_step()
+#    for step in range(5):
+#        arcsim.sim_step()
+
+def test_twoin_fold_demo():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
+    for step in range(5):
+        arcsim.sim_step()
+    for step in range(20):
+        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([step/2,step/2,step/10]).double()
+        sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-step/2,-step/2,step/10]).double()
+        #sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-7,-7,1]).double()
+        arcsim.sim_step()
+    for step in range(5):
+        arcsim.sim_step()
+
+
+
+def test_half_fold_demo():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
+    #sim.cloths[0].materials[0].damping = torch.Tensor([1])
+    for step in range(10):
+        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([6,-6.5,5.5]).double()
+        sim.cloths[0].mesh.nodes[2].v += torch.Tensor([6,3,5.5]).double()
+        arcsim.sim_step()
+    for step in range(20):
+        arcsim.sim_step()
+
+
+def test_pants_demo():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/pants/demo.json'),'default_out/out0',False)
+    for step in range(10):
+        print(step)
+        arcsim.sim_step()
+
+def test_lift_cloth_corner():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
+    for step in range(5):
+        arcsim.sim_step()
+    for step in range(25):
+        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([0,0,step*0.6]).double()
+        print(step*0.6)
+        arcsim.sim_step()
+
 if __name__ == '__main__':
+    #test_twoin_fold_demo()
+    #test_pants_demo()
+    #test_half_fold_demo()
+    #test_tshirt_sim()
+    #test_fold_demo()
+    #test_belt_demo()
     #test_sysid_sim()
     #test_mask_sim()
     test_cloth_hang_sim()
-
-    #test_drag_demo()
-    #test_sysid_sim()
-    #test_triangle_fold_sim()
-    #test_triangle_fold_sim()
+    #test_lift_cloth_corner()

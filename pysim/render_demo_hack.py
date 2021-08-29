@@ -1,22 +1,29 @@
 import torch
 import os
 import cv2
+
 import pytorch3d
-from pytorch3d.structures import Meshes
+from pytorch3d.structures import Meshes, Pointclouds
+from pytorch3d.io import load_obj
 from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import (
     chamfer_distance, 
-    mesh_edge_loss, 
-    mesh_laplacian_smoothing, 
-    mesh_normal_consistency,
 )
-from pytorch3d.io import load_obj, load_objs_as_meshes
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+device = torch.device("cuda:0")
+#device = "cpu"
 
 from pytorch3d.renderer import (
     look_at_view_transform,
     look_at_rotation,
     FoVPerspectiveCameras, 
+    FoVOrthographicCameras,
     OpenGLPerspectiveCameras, 
+    BlendParams,
     PointLights, 
     DirectionalLights, 
     Materials, 
@@ -24,56 +31,41 @@ from pytorch3d.renderer import (
     MeshRenderer, 
     MeshRasterizer,  
     SoftPhongShader,
+    HardPhongShader,
     SoftGouraudShader,
     TexturesUV,
-    TexturesVertex
+    TexturesVertex,
+    PointsRasterizationSettings,
+    PointsRenderer,
+    PulsarPointsRenderer,
+    PointsRasterizer,
+    AlphaCompositor,
+    NormWeightedCompositor
 )
 
 device = torch.device("cuda:0")
 
-#lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
-lights = DirectionalLights(device=device, direction=((1,0,1),))
-#R, T = look_at_view_transform(1.5, -60, 0) 
-R, T = look_at_view_transform(1.5, 0, 0) 
+lights = DirectionalLights(device=device, direction=((0,-1.0,0),))
+#lights = None
 
-#R, T = look_at_view_transform(1.25, 300, 0) 
-#T[0][0] += 0.4
-#T[0][1] -= 0.1
-
-#R, T = look_at_view_transform(1.25, 300, 0) 
-#T[0][0] += 0.4
-#T[0][1] -= 0.1
-
-#R, T = look_at_view_transform(0.9, 270, 0) 
-#T[0][0] += 0.5
-#T[0][1] += 0.05
-
-#R, T = look_at_view_transform(1, 300, 0) 
-#T[0][0] += 0.5
-#T[0][1] -= 0.1
-
+R, T = look_at_view_transform(1.25, -60, 0) 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
-raster_settings = RasterizationSettings(
-    image_size=150, 
-    blur_radius=0.0, 
-    faces_per_pixel=1, 
-    perspective_correct=True
+raster_settings = PointsRasterizationSettings(
+    image_size=128, 
+    radius = 0.005,
+    points_per_pixel = 150
 )
-renderer = MeshRenderer(
-    rasterizer=MeshRasterizer(
-        cameras=camera, 
-        raster_settings=raster_settings
-    ),
-    shader=SoftPhongShader(
-        device=device, 
-        cameras=camera,
-        lights=lights
-    )
+rasterizer = PointsRasterizer(cameras=camera, raster_settings=raster_settings)
+renderer = PointsRenderer(
+    rasterizer=rasterizer,
+    compositor=AlphaCompositor()
 )
-
+print(dir(renderer))
 
 num_frames = 30
 demo_length = 30
+num_points=1000000
+
 step = demo_length//num_frames
 out_dir = 'demo_video_frames'
 if not os.path.exists(out_dir):
@@ -85,8 +77,7 @@ for i in range(0, demo_length, step):
     all_faces = []
     all_textures = []
     vert_count = 0
-    #colors = torch.Tensor([[0,0,1], [0,1,0], [1,0,0]])
-    colors = torch.Tensor([[1,1,1], [0,1,0], [1,0,0]])
+    colors = torch.Tensor([[0,0,1], [0,1,0], [1,0,0]])
     for j, f in enumerate(mesh_fnames[:1]):
     #for j, f in enumerate(mesh_fnames):
         verts, faces, aux = load_obj(os.path.join("default_out", "out0", f))
@@ -101,5 +92,7 @@ for i in range(0, demo_length, step):
     tex = torch.cat(all_textures)[None]
     textures = TexturesVertex(verts_features=tex.to(device))
     mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)], textures=textures)
-    img  = renderer(mesh)[0,...,:3]*255
+    curr_pcl, rgb = sample_points_from_meshes(mesh, num_points, return_textures=True)
+    point_cloud = Pointclouds(points=[curr_pcl.squeeze()], features=[rgb.squeeze()])
+    img = renderer(point_cloud)[0, ..., :3]*255
     cv2.imwrite('%s/%03d.jpg'%(out_dir, i//step), img.detach().cpu().numpy())

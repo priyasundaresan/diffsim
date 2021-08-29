@@ -12,7 +12,6 @@ import os
 from datetime import datetime
 
 import cv2
-import matplotlib.image as mpimg
 
 import pytorch3d
 from pytorch3d.structures import Meshes, Pointclouds
@@ -21,32 +20,10 @@ from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import (
     chamfer_distance, 
 )
-
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-device = torch.device("cuda:0")
-#device = "cpu"
-
 from pytorch3d.renderer import (
     look_at_view_transform,
-    look_at_rotation,
+    FoVOrthographicCameras, 
     FoVPerspectiveCameras, 
-    FoVOrthographicCameras,
-    OpenGLPerspectiveCameras, 
-    BlendParams,
-    PointLights, 
-    DirectionalLights, 
-    Materials, 
-    RasterizationSettings, 
-    MeshRenderer, 
-    MeshRasterizer,  
-    SoftPhongShader,
-    HardPhongShader,
-    SoftGouraudShader,
-    TexturesUV,
-    TexturesVertex,
     PointsRasterizationSettings,
     PointsRenderer,
     PulsarPointsRenderer,
@@ -55,44 +32,26 @@ from pytorch3d.renderer import (
     NormWeightedCompositor
 )
 
-lights = None
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+device = torch.device("cuda:0")
 R, T = look_at_view_transform(1.25, -60, 0) 
-camera = FoVPerspectiveCameras(device=device, R=R, T=T)
+cameras = FoVPerspectiveCameras(device=device, R=R, T=T)
 raster_settings = PointsRasterizationSettings(
-    image_size=128, 
-    radius = 0.0065,
+    image_size=200, 
+    radius = 0.015,
     points_per_pixel = 150
 )
-rasterizer = PointsRasterizer(cameras=camera, raster_settings=raster_settings)
+rasterizer = PointsRasterizer(cameras=cameras, raster_settings=raster_settings)
 renderer = PointsRenderer(
     rasterizer=rasterizer,
     compositor=AlphaCompositor()
 )
 
-#blend_params = BlendParams(sigma=1e-4, gamma=1e-4)
-#raster_settings_soft = RasterizationSettings(
-#    image_size=128, 
-#    blur_radius=np.log(1. / 1e-4 - 1.) * blend_params.sigma, 
-#    faces_per_pixel=100, 
-#    perspective_correct=True
-#)
-#
-#renderer = MeshRenderer(
-#    rasterizer=MeshRasterizer(
-#        cameras=camera, 
-#        raster_settings=raster_settings_soft
-#    ),
-#    shader=HardPhongShader(
-#        blend_params=blend_params,
-#        device=device, 
-#        cameras=camera,
-#        lights=lights
-#    )
-#)
-
-
 criterion = torch.nn.MSELoss(reduction='mean')
-
 handles = [44]
 
 print(sys.argv)
@@ -132,8 +91,8 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 30
-num_points = 5000
+total_steps = 35
+num_points = 125000
 
 scalev=1
 
@@ -158,65 +117,56 @@ def plot_pointcloud(points, title=""):
     #plt.show()
 
 def get_render_mesh_from_sim(sim):
-    colors = torch.Tensor([[1,0,0], [0,1,0], [0,0,1]])
     cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
     cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
-    cloth_rgb = torch.ones_like(cloth_verts) # (V, 3)
-    cloth_rgb[:,] = colors[0]
-
-    ground_verts = torch.stack([v.node.x for v in sim.obstacles[0].curr_state_mesh.verts]).float().to(device)
-    ground_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[0].curr_state_mesh.faces]).to(device)
-    ground_faces += len(cloth_verts)
-    ground_rgb = torch.ones_like(ground_verts) # (V, 3)
-    ground_rgb[:,] = colors[1]
 
     pole_verts = torch.stack([v.node.x for v in sim.obstacles[1].curr_state_mesh.verts]).float().to(device)
     pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[1].curr_state_mesh.faces]).to(device)
-    pole_faces += len(cloth_verts) + len(ground_verts)
-    pole_rgb = torch.ones_like(pole_verts) # (V, 3)
-    pole_rgb[:,] = colors[2]
+    pole_faces += len(cloth_verts)
 
-    all_verts = [cloth_verts, ground_verts, pole_verts]
-    all_faces = [cloth_faces, ground_faces, pole_faces]
-    all_textures = [cloth_rgb, ground_rgb, pole_rgb]
-    tex = torch.cat(all_textures)[None]
-    textures = TexturesVertex(verts_features=tex.to(device))
+    all_verts = [cloth_verts, pole_verts]
+    all_faces = [cloth_faces, pole_faces]
 
-    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)], textures=textures)
+    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
     return mesh
 
-def get_loss_per_iter(sim, epoch, sim_step, num_points=2000000):
+def get_loss_per_iter(sim, epoch, sim_step):
     curr_mesh = get_render_mesh_from_sim(sim)
-    curr_pcl, rgb = sample_points_from_meshes(curr_mesh, num_points, return_textures=True)
-    point_cloud = Pointclouds(points=[curr_pcl.squeeze()], features=[rgb.squeeze()])
-    curr_image = renderer(point_cloud)[0, ..., :3]
-    #cv2.imshow('img', curr_image.detach().cpu().numpy())
-    #cv2.waitKey(0)
-    ref_image = mpimg.imread('demo_exp_learn_hang_img_video/%03d.jpg'%sim_step)
-    ref_image = torch.from_numpy(ref_image)[...,:3].to(device)/255.
+    curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
+    ref_pcl = torch.from_numpy(np.load('demo_exp_learn_hang_proj_video/%03d.npy'%sim_step)).to(device)
+
+    verts = curr_pcl.squeeze()
+    rgb = torch.ones((len(verts),4)).to(device)
+    depths = verts[:,2]
+    d_max, d_min = depths.max(), depths.min()
+    depths = (depths - d_min) / (d_max - d_min)
+    rgb[:,:3] *= depths.repeat(3,1).T
+    point_cloud = Pointclouds(points=[verts], features=[rgb])
+    img_curr = renderer(point_cloud)[0, ..., :3]
+
+    verts = ref_pcl.squeeze()
+    rgb = torch.ones((len(verts),4)).to(device)
+    depths = verts[:,2]
+    d_max, d_min = depths.max(), depths.min()
+    depths = (depths - d_min) / (d_max - d_min)
+    rgb[:,:3] *= depths.repeat(3,1).T
+    point_cloud = Pointclouds(points=[verts], features=[rgb])
+    img_ref = renderer(point_cloud)[0, ..., :3]
+
     if epoch % 1 == 0:
-        visualization = np.hstack((curr_image.detach().cpu().numpy(), ref_image.detach().cpu().numpy()))
+        visualization = np.hstack((img_curr.detach().cpu().numpy(), img_ref.detach().cpu().numpy()))
         cv2.imwrite('%s/epoch%03d-%03d.jpg'%(out_path, epoch, sim_step), visualization*255)
 
-    loss = criterion(curr_image, ref_image) 
+    #loss, _ = chamfer_distance(ref_pcl, curr_pcl)
+    #if epoch % 5 == 0:
+    #    plot_pointcloud(curr_pcl, title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
+    loss = criterion(img_curr, img_ref) 
     return loss
-
-    #curr_mesh = get_render_mesh_from_sim(sim)
-    #curr_image = renderer(curr_mesh)[0,...,:3]
-    #ref_image = mpimg.imread('demo_exp_learn_hang_img_video/%03d.jpg'%sim_step)
-    #ref_image = torch.from_numpy(ref_image)[...,:3].to(device)/255.
-    #if epoch % 1 == 0:
-    #    visualization = np.hstack((curr_image.detach().cpu().numpy(), ref_image.detach().cpu().numpy()))
-    #    cv2.imwrite('%s/epoch%03d-%03d.jpg'%(out_path, epoch, sim_step), visualization*255)
-
-    #loss = criterion(curr_image, ref_image) 
-    #return loss
 
 def run_sim(steps, sim, net, epoch):
     loss = 0
     for param in net.parameters():
         print(torch.median(torch.abs(param.grad)).item() if param.grad is not None else None)
-    print(sim.cloths[0].mesh.nodes[handles[0]].v.grad)
     for step in range(steps):
         print(step)
         remain_time = torch.tensor([(total_steps - step)/total_steps],dtype=torch.float64)
@@ -234,28 +184,22 @@ def run_sim(steps, sim, net, epoch):
             sim.cloths[0].mesh.nodes[handles[i]].v += sim_input 
 
         arcsim.sim_step()
-        loss += get_loss_per_iter(sim, epoch, step)
+    loss += get_loss_per_iter(sim, epoch, step)
     
-    loss /= steps
+    #loss /= steps
     
     return loss
 
 def do_train(cur_step,optimizer,sim,net):
     epoch = 0
-    loss = float('inf')
     thresh = 0.015
-    num_steps_to_run = 1
+    num_steps_to_run = total_steps
     while True:
         
         reset_sim(sim, epoch)
         
         st = time.time()
         loss = run_sim(num_steps_to_run, sim, net, epoch)
-        
-        if loss < thresh:
-            num_steps_to_run += 1
-        if num_steps_to_run >= total_steps:
-            break
         
         en0 = time.time()
         
@@ -280,23 +224,23 @@ def do_train(cur_step,optimizer,sim,net):
         # break
 
 with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
-    tot_step = 1
-    sim=arcsim.get_sim()
-    # reset_sim(sim)
-    
-    net = Net(len(handles)*6 + 1, len(handles)*2)
-    if os.path.exists(torch_model_path):
-    	net.load_state_dict(torch.load(torch_model_path))
-    	print("load: %s\n success" % torch_model_path)
-    
-    lr = 0.01
-    momentum = 0.9
-    f.write('lr={} momentum={}\n'.format(lr,momentum))
-    #optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum
-    optimizer = torch.optim.Adam(net.parameters(),lr=lr)
-    # optimizer = torch.optim.Adadelta([density, stretch, bend])
-    for cur_step in range(tot_step):
-    	do_train(cur_step,optimizer,sim,net)
+	tot_step = 1
+	sim=arcsim.get_sim()
+	# reset_sim(sim)
+
+	net = Net(len(handles)*6 + 1, len(handles)*2)
+	if os.path.exists(torch_model_path):
+		net.load_state_dict(torch.load(torch_model_path))
+		print("load: %s\n success" % torch_model_path)
+
+	lr = 0.01
+	momentum = 0.9
+	f.write('lr={} momentum={}\n'.format(lr,momentum))
+	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum)
+	optimizer = torch.optim.Adam(net.parameters(),lr=lr)
+	# optimizer = torch.optim.Adadelta([density, stretch, bend])
+	for cur_step in range(tot_step):
+		do_train(cur_step,optimizer,sim,net)
 
 print("done")
 
