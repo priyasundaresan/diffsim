@@ -73,6 +73,7 @@ def test_sysid_sim():
     arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start.json'),'default_out/out0',False)
     #orig = sim.cloths[0].materials[0].stretching
     print(dir(sim.cloths[0]))
+    print(dir(sim.cloths[0].materials[0].bending))
     #sim.cloths[0].materials[0].stretching = orig*0.05
     #sim.cloths[0].materials[0].stretching = orig*0.03
     #sim.cloths[0].materials[0].stretching = orig*0.01
@@ -249,14 +250,24 @@ def test_lift_cloth_corner():
         print(step*0.6)
         arcsim.sim_step()
 
+def test_lasso_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_fast.json'),'default_out/out0',False)
+    for step in range(40):
+        print(step)
+        arcsim.sim_step()
+
 if __name__ == '__main__':
+    #test_lasso_sim()
     #test_twoin_fold_demo()
     #test_pants_demo()
     #test_half_fold_demo()
     #test_tshirt_sim()
     #test_fold_demo()
     #test_belt_demo()
-    #test_sysid_sim()
+    test_sysid_sim()
     #test_mask_sim()
-    test_cloth_hang_sim()
+    #test_cloth_hang_sim()
     #test_lift_cloth_corner()
