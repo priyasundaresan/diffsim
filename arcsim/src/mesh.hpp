@@ -125,8 +125,8 @@ struct Edge {
 };
 
 struct Face {
-    std::array<Vert*, 3> v;
-    //Vert* v[3]; // verts
+    std::array<Vert*, 3> v_arr; // @PRIYA
+    Vert* v[3]; // verts
     int label;
     // topological data
     Edge *adje[3]; // adjacent edges
@@ -146,6 +146,9 @@ struct Face {
         v[0] = vert0;
         v[1] = vert1;
         v[2] = vert2;
+        v_arr[0] = vert0;
+        v_arr[1] = vert1;
+        v_arr[2] = vert2;
     }
 };
 

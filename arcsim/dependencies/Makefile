@@ -12,7 +12,7 @@ lib/libjson.a:
 	cd jsoncpp && scons platform=linux-gcc
 	mkdir -p include/json/ lib/
 	cp jsoncpp/include/json/*.h include/json/
-	cp jsoncpp/libs/linux-gcc-*/libjson_linux-gcc-*_libmt.a lib/libjson.a
+	cp jsoncpp/libs/linux-gcc-4.8/libjson_linux-gcc-4.8_libmt.a lib/libjson.a
 
 lib/libtaucs.a:
 	cd taucs && ./configure module=\!METIS && $(MAKE)

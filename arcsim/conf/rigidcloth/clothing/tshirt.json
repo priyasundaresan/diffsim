@@ -2,96 +2,43 @@
     "frame_time": 0.04,
     "frame_steps": 1,
     "end_time": 4,
-    "cloths": [{
-        "mesh": "meshes/rigidcloth/clothing/tshirt.obj",
-        "transform": {"translate": [0,0,0.5]},
-        "materials": [{
-            "data": "materials/gray-interlock.json",
-            "yield_curv": 200,
-            "damping": 1e-3
-        }],
+    "cloths": [
+    {
+        "mesh": "meshes/rigidcloth/clothing/crewneck_3d.obj",
+        "materials": [{"data": "materials/gray-interlock.json",
+                       "thicken": 2}],
         "remeshing": {
             "refine_angle": 0.3,
-            "refine_compression": 0.01,
+            "refine_compression": 0.005,
             "refine_velocity": 0.5,
-            "size": [10e-3, 200e-3],
+            "size": [10e-3, 100e-3],
             "aspect_min": 0.2
         }
-    }],
-    "motions": [[
-        {"time": 4.5},
-        {"time": 5.5, "transform": {"translate": [-0.19,0,0.792], "scale": 0}}
-    ], [
-        {"time": 4.5},
-        {"time": 5.5, "transform": {"translate": [0.20,0,0.786], "scale": 0}}
-    ], [
-	{"time": 1.5, "transform": {"translate": [0,0,0]}},
-	{"time": 3.0, "transform": {"translate": [0,0.9,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 3.5, "transform": {"translate": [0,0.9,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 4.5, "transform": {"translate": [0,0,0]}}
-    ], [
-	{"time": 1.5, "transform": {"translate": [0,0,0]}},
-	{"time": 3.0, "transform": {"translate": [0,-0.9,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 3.5, "transform": {"translate": [0,-0.9,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 4.5, "transform": {"translate": [0,0,0]}}
-    ], [
-	{"time": 1.5, "transform": {"translate": [0,0,0]}},
-	{"time": 3.0, "transform": {"translate": [0.9,0,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 3.5, "transform": {"translate": [0.9,0,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 4.5, "transform": {"translate": [0,0,0]}}
-    ], [
-	{"time": 1.5, "transform": {"translate": [0,0,0]}},
-	{"time": 3.0, "transform": {"translate": [-0.9,0,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 3.5, "transform": {"translate": [-0.9,0,0]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 4.5, "transform": {"translate": [0,0,0]}}
-    ], [
-	{"time": 1.5, "transform": {"translate": [0,0,0]}},
-	{"time": 3.0, "transform": {"translate": [0,0,-0.9]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 3.5, "transform": {"translate": [0,0,-0.9]},
-                      "velocity": {"translate": [0,0,0]}},
-	{"time": 4.5, "transform": {"translate": [0,0.0,0]}}
-    ]],
-    "obstacles": [{
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [-1,-1,0], "scale": 2}
-    }, {
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [-0.5,-1,0.5], "rotate": [-90, 1,0,0]},
-        "motion": 2
-    }, {
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [-0.5,1,-0.5], "rotate": [90, 1,0,0]},
-        "motion": 3
-    }, {
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [-1,-0.5,0.5], "rotate": [90, 0,1,0]},
-        "motion": 4
-    }, {
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [1,-0.5,-0.5], "rotate": [-90, 0,1,0]},
-        "motion": 5
-    }, {
-        "mesh": "meshes/rigidcloth/clothing/square.obj",
-        "transform": {"translate": [-0.5,0.5,1.0], "rotate": [180, 1,0,0]},
-        "motion": 6,
-        "start_time": 1.5,
-        "end_time": 4
-    }],
-    "handles": [ 
-        {"nodes": [29, 91], "end_time": 1},
-        {"nodes": [29], "motion": 0, "start_time": 4.5},
-        {"nodes": [91], "motion": 1, "start_time": 4.5}
+    }
     ],
-    "gravity": [0, 0, -2],
-    "disable": ["popfilter", "remeshing", "proximity"],
+    "motions": [[
+        {"time": 0},
+        {"time": 3, "transform": {"translate": [-0.35,0,0.2], "scale": 0}}
+    ], [
+        {"time": 0},
+        {"time": 3, "transform": {"translate": [0.35,0,0.2], "scale": 0}}
+    ], [
+        {"time": 0},
+        {"time": 3, "transform": {"translate": [0,0,0], "scale": 0}}
+    ]], 
+    "handles": [ 
+        {"nodes": [86,144], "end_time": 3},
+        {"nodes": [86], "motion": 0, "start_time": 0, "end_time": 3},
+        {"nodes": [144], "motion": 1, "start_time": 0, "end_time": 3}
+    ],
+    "obstacles": [
+    {
+        "mesh": "meshes/rigidcloth/plane.obj",
+        "transform":{"scale":1,"translate":[-0.5,0,0.3],"rotate":[0,1,0,0]},
+        "movable": 0
+    }],
+    "disable":["remeshing","proximity"],
+    "gravity":[0, 0, -1.8],
+    //"magic": {"repulsion_thickness": 5e-3, "collision_stiffness": 1e6}
     "magic": {"repulsion_thickness": 5e-3, "collision_stiffness": 1e6}
 }

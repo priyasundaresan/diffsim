@@ -150,18 +150,19 @@ void advance_step (Simulation &sim) {
     // cout << "\t\ttime= "<< ti.last << endl;
 }
 
+// PRIYA
 vector<Constraint*> get_constraints (Simulation &sim, bool include_proximity) {
     // cout << "get_constraints" << endl;
     vector<Constraint*> cons;
     for (int h = 0; h < sim.handles.size(); h++)
         append(cons, sim.handles[h]->get_constraints(sim.time));
-    //if (include_proximity && sim.enabled[proximity]) {
-    //    sim.timers[proximity].tick();
-    //    append(cons, proximity_constraints(sim.cloth_meshes,
-    //                                       sim.obstacle_meshes,
-    //                                       sim.friction, sim.obs_friction));
-    //    sim.timers[proximity].tock();
-    //}
+    if (include_proximity && sim.enabled[proximity]) {
+        sim.timers[proximity].tick();
+        append(cons, proximity_constraints(sim.cloth_meshes,
+                                           sim.obstacle_meshes,
+                                           sim.friction, sim.obs_friction));
+        sim.timers[proximity].tock();
+    }
     return cons;
 }
 
