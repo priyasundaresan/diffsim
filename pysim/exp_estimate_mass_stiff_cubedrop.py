@@ -139,7 +139,7 @@ def do_train(cur_step,optimizer,sim):
         print('forward tim = {}'.format(en0-st))
         print('backward time = {}'.format(en1-en0))
 
-        if loss < 0.002 or loss == float('inf'):
+        if loss < 0.005 or loss == float('inf'):
             print("final params (stiffness, mass): ", param_g, ", (ref: 0.15, 0.02)")
             break
         
@@ -160,8 +160,10 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 
     results = []
     cur_step = 0
-    for i in np.linspace(0.1,1.1,5):
-        for j in np.linspace(0.05,0.4,5):
+    #for i in np.linspace(0.1,1.1,5):
+    #    for j in np.linspace(0.05,0.4,5):
+    for i in np.linspace(0.15,1.1,5):
+        for j in np.linspace(0.02,0.4,5):
             pprint.pprint(results)
             param_g = torch.tensor([i,j],dtype=torch.float64, requires_grad=True)
             lr = 0.015
@@ -169,7 +171,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
             try:
                 result, loss = do_train(cur_step,optimizer,sim)
                 if loss != float('inf'):
-                    results.append([i,j] + result.squeeze().tolist())
+                    results.append([i,j] + result.squeeze().tolist() + [loss.item()])
                 os.system('mv %s ./%s/run%d'%(out_path, out_dir,cur_step))
                 os.system('mkdir %s'%out_path)
                 save_config(config, out_path+'/conf.json')

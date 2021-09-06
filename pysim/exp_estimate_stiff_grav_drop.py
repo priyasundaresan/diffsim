@@ -79,23 +79,23 @@ def plot_pointcloud(points, title=""):
 
 def get_loss(sim):
     reg  = torch.norm(param_g, p=2)*0.001 
-    loss = 0
-    node_number = ref_verts.shape[0]
-    for i in range(node_number):
-        loss += torch.norm(ref_verts[i]-(sim.cloths[0].mesh.nodes[i].x.to(device)))**2
-    loss /= node_number
+    #loss = 0
+    #node_number = ref_verts.shape[0]
+    #for i in range(node_number):
+    #    loss += torch.norm(ref_verts[i]-(sim.cloths[0].mesh.nodes[i].x.to(device)))**2
+    #loss /= node_number
 
-    #verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
-    #faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
+    verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
+    faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
 
-    #curr_mesh = Meshes(verts=[verts], faces=[faces])
+    curr_mesh = Meshes(verts=[verts], faces=[faces])
 
-    #sample_trg = sample_points_from_meshes(ref_mesh, 1000)
-    #sample_src = sample_points_from_meshes(curr_mesh, 1000)
+    sample_trg = sample_points_from_meshes(ref_mesh, 1000)
+    sample_src = sample_points_from_meshes(curr_mesh, 1000)
 
-    #loss_chamfer, _ = chamfer_distance(sample_trg, sample_src)
+    loss_chamfer, _ = chamfer_distance(sample_trg, sample_src)
 
-    #loss = loss_chamfer
+    loss = loss_chamfer
     return loss.cpu() + reg
     #return loss.cpu()
 
@@ -139,7 +139,7 @@ def do_train(cur_step,optimizer,sim):
         print('forward tim = {}'.format(en0-st))
         print('backward time = {}'.format(en1-en0))
 
-        if loss < 0.004:
+        if loss < 0.006:
             print("final params", param_g)
             break
         
@@ -153,8 +153,6 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     tot_step = 2
     sim=arcsim.get_sim()
     
-    #param_g = torch.tensor([0.5,0.5],dtype=torch.float64, requires_grad=True)
-
     out_dir = 'exps_stiff_grav'
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
@@ -163,6 +161,8 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     cur_step = 0
     for i in np.linspace(0.4,1.2,5):
         for j in np.linspace(0.4,1.2,5):
+    #for i in np.linspace(0.4,1.2,4):
+    #    for j in np.linspace(0.4,1.2,4):
             pprint.pprint(results)
             param_g = torch.tensor([i,j],dtype=torch.float64, requires_grad=True)
             lr = 0.1

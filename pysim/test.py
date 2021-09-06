@@ -107,8 +107,9 @@ def test_cloth_hang_sim():
     #for step in range(30):
     #    arcsim.sim_step()
     #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket.json'),'default_out/out0',False)
-    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles.json'),'default_out/out0',False)
-    for step in range(40):
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles_new.json'),'default_out/out0',False)
+    for step in range(50):
         print(step)
         arcsim.sim_step()
 
@@ -117,7 +118,7 @@ def test_mask_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/mask/demo_fast.json'),'default_out/out0',False)
-    for step in range(18):
+    for step in range(30):
         print(step)
         arcsim.sim_step()
 
@@ -224,15 +225,31 @@ def test_half_fold_demo():
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
     orig_stretch = sim.cloths[0].materials[0].stretching 
-    sim.obs_friction = torch.Tensor([0.8]).double()
+    sim.obs_friction = torch.Tensor([1.3]).double()
     #sim.gravity *= 1.5
-    sim.cloths[0].materials[0].stretching = orig_stretch*0.04
+    #sim.cloths[0].materials[0].stretching = orig_stretch*0.04
     for step in range(20):
         print(step)
-        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([12.0,-8.0,5]).double()
-        sim.cloths[0].mesh.nodes[2].v += torch.Tensor([12.0,+5.0,5]).double()
+        sim.cloths[0].mesh.nodes[0].v += torch.Tensor([11.2,-6.0,8]).double()
+        sim.cloths[0].mesh.nodes[2].v += torch.Tensor([11.2,+5.0,8]).double()
         arcsim.sim_step()
+    for step in range(20):
+        sim.cloths[0].mesh.nodes[1].v += torch.Tensor([-15.0,-6.0,8]).double()
+        sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-15.0,+5.0,8]).double()
+        print(step)
+        arcsim.sim_step()
+    for step in range(30):
+        print(step)
+        arcsim.sim_step()
+    #for step in range(10):
+    #    print(step)
+    #    sim.cloths[0].mesh.nodes[7].v += torch.Tensor([-8,0,5]).double()
+    #    arcsim.sim_step()
     for step in range(10):
+        print(step)
+        sim.cloths[0].mesh.nodes[7].v += torch.Tensor([-8,0,-5]).double()
+        arcsim.sim_step()
+    for step in range(5):
         print(step)
         arcsim.sim_step()
 
@@ -277,17 +294,22 @@ def test_lasso_sim():
         arcsim.sim_step()
 
 if __name__ == '__main__':
-    test_cube_cloth()
+    #test_cloth_hang_sim()
+    #test_mask_sim()
+    #test_belt_demo()
+    #test_lasso_sim()
+
+
+    #test_twoin_fold_demo()
+    #test_cube_cloth()
     #test_fricdrag_cloth_demo()
     #test_lasso_sim()
     #test_twoin_fold_demo()
     #test_pants_demo()
-    #test_half_fold_demo()
+    test_half_fold_demo()
     #test_quarter_fold_demo()
     #test_tshirt_sim()
     #test_fold_demo()
     #test_belt_demo()
     #test_sysid_sim()
-    #test_mask_sim()
-    #test_cloth_hang_sim()
     #test_lift_cloth_corner()

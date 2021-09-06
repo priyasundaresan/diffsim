@@ -25,7 +25,7 @@ import matplotlib as mpl
 
 device = torch.device("cuda:0")
 
-handles = [16,25]
+handles = [14,15]
 
 print(sys.argv)
 if len(sys.argv)==1:
@@ -52,7 +52,7 @@ class Net(nn.Module):
 		# x = torch.clamp(x, min=-5, max=5)
 		return x
 
-with open('conf/rigidcloth/mask/start.json','r') as f:
+with open('conf/rigidcloth/wrap/start.json','r') as f:
 	config = json.load(f)
 
 def save_config(config, file):
@@ -64,7 +64,7 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 27
+total_steps = 50
 num_points = 5000
 
 scalev=1
@@ -86,7 +86,7 @@ def plot_pointclouds(pcls, title=""):
         ax.set_ylim([-0.5,1.0])
         ax.set_zlim([-1,0.5])
         ax.set_title(titles[i])
-        ax.view_init(30, 30)
+        ax.view_init(30,-75)
     plt.savefig(title)
     plt.clf()
     plt.cla()
@@ -96,8 +96,8 @@ def get_render_mesh_from_sim(sim):
     cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
     cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
 
-    pole_verts = torch.stack([v.node.x for v in sim.obstacles[0].curr_state_mesh.verts]).float().to(device)
-    pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[0].curr_state_mesh.faces]).to(device)
+    pole_verts = torch.stack([v.node.x for v in sim.obstacles[1].curr_state_mesh.verts]).float().to(device)
+    pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[1].curr_state_mesh.faces]).to(device)
     pole_faces += len(cloth_verts)
 
     all_verts = [cloth_verts, pole_verts]
@@ -109,7 +109,7 @@ def get_render_mesh_from_sim(sim):
 def get_loss_per_iter(sim, epoch, sim_step):
     curr_mesh = get_render_mesh_from_sim(sim)
     curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
-    ref_pcl = torch.from_numpy(np.load('demo_exp_learn_mask_pcl_video/%03d.npy'%sim_step)).to(device)
+    ref_pcl = torch.from_numpy(np.load('demo_exp_learn_wrap_pcl_video/%03d.npy'%sim_step)).to(device)
     loss_chamfer, _ = chamfer_distance(ref_pcl, curr_pcl)
     if epoch % 5 == 0:
         plot_pointclouds([curr_pcl, ref_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
@@ -147,8 +147,6 @@ def do_train(cur_step,optimizer,sim,net):
     num_steps_to_run = 1
     #num_steps_to_run = total_steps
     while True:
-        if num_steps_to_run >= total_steps:
-            break
         
         reset_sim(sim, epoch)
         
@@ -160,6 +158,9 @@ def do_train(cur_step,optimizer,sim,net):
         if loss < thresh:
             #num_steps_to_run += min(3, total_steps-num_steps_to_run)
             num_steps_to_run += 1
+
+        if num_steps_to_run > total_steps:
+            break
         
         en0 = time.time()
         

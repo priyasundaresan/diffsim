@@ -23,14 +23,11 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 #demo_length = 30
-demo_length = 40
+#demo_length = 40
+#demo_length = 45
+demo_length = 50
 step = 1
 out_dir = 'demo_pcl_frames'
-#num_points = 125000
-#num_points = 125000
-#num_points = 10000
-
-#num_points = 50000
 num_points = 5000
 
 def plot_pointcloud(points, title=""):
@@ -42,7 +39,7 @@ def plot_pointcloud(points, title=""):
     ax.set_ylabel('z')
     ax.set_zlabel('y')
     ax.set_title(title)
-    ax.view_init(100, 30)
+    ax.view_init(100, -60)
     #plt.savefig(title)
     #plt.clf()
     plt.show()
@@ -67,7 +64,7 @@ def sim_objs_to_pcls(sim_dir='default_out'):
         mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
         sample_pcl = sample_points_from_meshes(mesh, num_points)
         np.save(os.path.join(out_dir, '%03d.npy'%i), sample_pcl)
-        plot_pointcloud(sample_pcl)
+        #plot_pointcloud(sample_pcl)
         #break
 if __name__ == '__main__':
     sim_objs_to_pcls()

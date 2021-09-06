@@ -40,34 +40,24 @@ from pytorch3d.renderer import (
 
 device = torch.device("cuda:0")
 lights = DirectionalLights(device=device, direction=((1,0,1),))
-#R, T = look_at_view_transform(1.5, -60, 0) 
 R, T = look_at_view_transform(1.5, 0, 0) 
 camera = FoVPerspectiveCameras(device=device, R=R, T=T)
 sigma = 1e-4
 raster_settings_soft = RasterizationSettings(
     image_size=150, 
     blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
-    faces_per_pixel=50, 
-    bin_size = None,  # this setting controls whether naive or coarse-to-fine rasterization is used
-    max_faces_per_bin = None  # this setting is for coarse rasterization
+    faces_per_pixel=1, 
     perspective_correct=True
 )
-renderer = MeshRenderer(
-    rasterizer=MeshRasterizer(
-        cameras=camera, 
-        raster_settings=raster_settings_soft
-    ),
-    shader=SoftPhongShader(
-        device=device, 
-        cameras=camera,
-        lights=lights
-    )
+
+rasterizer=MeshRasterizer(
+    cameras=camera, 
+    raster_settings=raster_settings_soft
 )
 
 criterion = torch.nn.MSELoss(reduction='sum')
 
 handles = [0,3]
-#handles = [0,9,14,15,25]
 
 total_steps = 30
 
@@ -94,8 +84,6 @@ class Net(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        #x = elu(self.fc1(x))
-        #x = elu(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -125,16 +113,23 @@ def get_render_mesh_from_sim(sim):
     all_verts = [cloth_verts]
     all_faces = [cloth_faces]
     all_textures = [cloth_rgb]
-    all_tex = torch.cat(all_textures)[None]
-    textures = TexturesVertex(verts_features=all_tex)
-    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)], textures=textures)
+    mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
     return mesh
 
 def get_loss_per_iter(sim, epoch, sim_iter):
     curr_mesh = get_render_mesh_from_sim(sim)
-    curr_image = renderer(curr_mesh)[0,...,:3]
-    ref_image = mpimg.imread('demo_exp_learn_twoin/%03d.jpg'%sim_iter)
-    ref_image = torch.from_numpy(ref_image)[...,:3].to(device)/255.
+    fragments = rasterizer(curr_mesh)
+    curr_image = fragments.zbuf[0].squeeze()
+    minval, maxval = torch.min(curr_image), torch.max(curr_image)
+    #minval, maxval = 1.3177, 1.5088
+    curr_image = (curr_image - minval)/(maxval - minval)
+
+    ref_image = cv2.imread('demo_exp_learn_twoin_depth/%03d.jpg'%sim_iter, 0)/255.
+    #ref_image = cv2.imread('demo_exp_learn_twoin_depth_darker/%03d.jpg'%sim_iter, 0)/255.
+    ref_image = torch.from_numpy(ref_image).to(device)
+
+    #print(curr_image.shape, ref_image.shape)
+    #print(torch.min(curr_image), torch.max(curr_image), torch.min(ref_image), torch.max(ref_image))
 
     if epoch % 1 == 0:
         visualization = np.hstack((curr_image.detach().cpu().numpy(), ref_image.detach().cpu().numpy()))
@@ -154,6 +149,7 @@ def run_sim(steps, sim, net, epoch):
     loss = 0
     for _ in range(5):
         arcsim.sim_step()
+
     #if epoch==0:
     #    sim.cloths[0].mesh.nodes[handles[0]].v += torch.rand(3)
     #    sim.cloths[0].mesh.nodes[handles[1]].v += torch.rand(3)
@@ -184,7 +180,7 @@ def run_sim(steps, sim, net, epoch):
 def do_train(cur_step,optimizer,sim,net):
     epoch = 0
     num_steps_to_run = 10
-    thresh = 215
+    thresh = 850
     while True:
         if num_steps_to_run > total_steps:
             break

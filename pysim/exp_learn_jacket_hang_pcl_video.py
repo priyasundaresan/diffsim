@@ -66,7 +66,7 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 40
+total_steps = 50
 num_points = 5000
 
 scalev=1
@@ -105,7 +105,7 @@ def plot_pointclouds(pcls, title=""):
         ax.set_ylim([-0.5,1.0])
         ax.set_zlim([-1,0.5])
         ax.set_title(titles[i])
-        ax.view_init(30, 30)
+        ax.view_init(30, -50)
     plt.savefig(title)
     plt.clf()
     plt.cla()
@@ -167,10 +167,7 @@ def run_sim(steps, sim, net, epoch):
 def do_train(cur_step,optimizer,sim,net):
     epoch = 0
     loss = float('inf')
-    #thresh = 0.006 
-    #thresh = 0.008 
-    #thresh = 0.015 
-    thresh = 0.005
+    thresh = 0.007
     num_steps_to_run = 1
     while True:
         
@@ -179,13 +176,11 @@ def do_train(cur_step,optimizer,sim,net):
         st = time.time()
         loss = run_sim(num_steps_to_run, sim, net, epoch)
         
-        if loss < thresh:
-            #num_steps_to_run += 1 if num_steps_to_run < 20 else 3
-            #num_steps_to_run += 5 if num_steps_to_run < 20 else 1
-            num_steps_to_run += 7
         if num_steps_to_run >= total_steps:
             break
-        
+        if loss < thresh:
+            num_steps_to_run += 1
+    
         en0 = time.time()
         
         optimizer.zero_grad()
@@ -213,7 +208,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	sim=arcsim.get_sim()
 	# reset_sim(sim)
 
-	net = Net(len(handles)*6 + 1, 3*len(handles))
+	net = Net(len(handles)*6 + 1, len(handles*3))
 	if os.path.exists(torch_model_path):
 		net.load_state_dict(torch.load(torch_model_path))
 		print("load: %s\n success" % torch_model_path)
@@ -222,10 +217,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
 	lr = 0.01
 	momentum = 0.9
 	f.write('lr={} momentum={}\n'.format(lr,momentum))
-	#optimizer = torch.optim.SGD([{'params':net.parameters(),'lr':lr}],momentum=momentum)
-	#optimizer = torch.optim.Adam(net.parameters(),lr=lr, weight_decay=1e-4)
 	optimizer = torch.optim.Adam(net.parameters(),lr=lr)
-	# optimizer = torch.optim.Adadelta([density, stretch, bend])
 	for cur_step in range(tot_step):
 		do_train(cur_step,optimizer,sim,net)
 
