@@ -18,13 +18,13 @@
     ],
     "motions": [[
         {"time": 0.0},
-        {"time": 0.7, "transform": {"translate": [0.8,0,0.3], "scale": 0}},
+        {"time": 0.7, "transform": {"translate": [0.8,0,0.1], "scale": 0}},
         {"time": 1.1, "transform": {"translate": [-0.7,0,-0.05], "scale": 0}},
-        {"time": 1.3, "transform": {"translate": [-1.0,0,-0.25], "scale": 0}}
+        {"time": 1.6, "transform": {"translate": [-1.0,0,-0.25], "scale": 0}}
     ]],
     "handles": [ 
-        {"nodes": [12,15], "end_time": 1.3},
-        {"nodes": [12,15], "motion": 0, "start_time": 0, "end_time": 1.3}
+        {"nodes": [12,15], "end_time": 1.6},
+        {"nodes": [12,15], "motion": 0, "start_time": 0, "end_time": 1.6}
     ],
     "obstacles": [
     {

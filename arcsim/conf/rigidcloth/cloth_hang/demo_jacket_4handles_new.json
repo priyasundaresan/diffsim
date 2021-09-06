@@ -16,6 +16,15 @@
         }
     }
     ],
+    "motions": [[
+        {"time": 0},
+        {"time": 0.75, "transform": {"translate": [0,0.175,1.08], "scale": 0}},
+        {"time": 1.80, "transform": {"translate": [0,0.55,1.1], "scale": 0}}
+    ]],
+    "handles": [ 
+        {"nodes": [0,2,38,39], "end_time": 1.9},
+        {"nodes": [0,2,38,39], "motion": 0, "start_time": 0.1, "end_time": 1.9}
+    ],
     "obstacles": [
     {
         "mesh": "meshes/rigidcloth/cloth_hang/hook_further_back.obj",

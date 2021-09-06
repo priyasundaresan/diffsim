@@ -18,30 +18,23 @@
     ],
     "motions": [[
         {"time": 0},
-        {"time": 0.5, "transform": {"translate": [1.15,0,1.05], "scale": 0}},
-        {"time": 1.00, "transform": {"translate": [0,0.9,1.05], "scale": 0}}
+        {"time": 0.5, "transform": {"translate": [0.7,0.3,0.9], "scale": 0}}
     ],[
         {"time": 0},
-        {"time": 0.25, "transform": {"translate": [-1.15,0,1.05], "scale": 0}},
-        {"time": 1.00, "transform": {"translate": [0,0.9,1.05], "scale": 0}}
+        {"time": 0.5, "transform": {"translate": [-0.7,0.3,0.9], "scale": 0}}
     ]],
     "handles": [ 
-        {"nodes": [74,77], "end_time": 1.8},
-        {"nodes": [74], "motion": 0, "start_time": 0, "end_time": 1.8},
-        {"nodes": [77], "motion": 1, "start_time": 0, "end_time": 1.8}
+        {"nodes": [16,25], "end_time": 2},
+        {"nodes": [16], "motion": 0, "start_time": 0, "end_time": 2},
+        {"nodes": [25], "motion": 1, "start_time": 0, "end_time": 2}
     ],
     "obstacles": [
-    {
-        "mesh": "meshes/rigidcloth/plane.obj",
-        "transform":{"scale":1,"translate":[-0.3,0,-0.5],"rotate":[0,1,0,0]},
-        "movable": 0
-    },
     {
         "mesh": "meshes/rigidcloth/mask/hook_compact.obj",
         "transform":{"scale":1,"translate":[0,0,0],"rotate":[0,1,0,0]},
         "movable": 0
     }],
-    "disable":["remeshing"],
+    "disable":["remeshing", "proximity"],
     "gravity":[0, 0, -2],
     "magic": {"repulsion_thickness": 5e-3, "collision_stiffness": 1e6}
 }

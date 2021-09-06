@@ -1,7 +1,7 @@
 {
     "frame_time": 0.04,
     "frame_steps": 1,
-    "end_time": 2,
+    "end_time": 6,
     "cloths": [
     {
         "mesh": "meshes/rigidcloth/fold/cloth.obj",
@@ -19,7 +19,7 @@
     "obstacles": [
     {
         "mesh": "meshes/rigidcloth/plane.obj",
-        "transform":{"scale":1,"translate":[-0.75,0,0.51],"rotate":[0,1,0,0]},
+        "transform":{"scale":1,"translate":[-0.75,-0.35,0.51],"rotate":[0,1,0,0]},
         "movable": 0
     }
     ],
