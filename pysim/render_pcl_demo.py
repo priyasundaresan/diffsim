@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 #demo_length = 30
-#demo_length = 40
+demo_length = 40
 #demo_length = 45
-demo_length = 50
+#demo_length = 50
 step = 1
 out_dir = 'demo_pcl_frames'
 num_points = 5000

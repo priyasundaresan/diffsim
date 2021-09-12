@@ -59,16 +59,8 @@ def test_sysid_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start.json'),'default_out/out0',False)
-    print(dir(sim.cloths[0].materials[0]))
-    #orig = sim.cloths[0].materials[0].bendingori 
     orig_stretch = sim.cloths[0].materials[0].stretching 
-    orig_damping = sim.cloths[0].materials[0].damping
-    orig_densityori =  sim.cloths[0].materials[0].densityori
-    orig_bendingori =  sim.cloths[0].materials[0].bendingori
-    print(orig_bendingori)
-    print(orig_damping)
-    sim.cloths[0].materials[0].stretching = orig_stretch*100
-    sim.cloths[0].materials[0].damping = torch.Tensor([0.5])
+    sim.cloths[0].materials[0].stretching = orig_stretch*0.01
     for step in range(20):
         arcsim.sim_step()
 
@@ -103,15 +95,13 @@ def test_cloth_hang_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast.json'),'default_out/out0',False)
-    #for step in range(30):
-    #    arcsim.sim_step()
-    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket.json'),'default_out/out0',False)
-    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles.json'),'default_out/out0',False)
-    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles_new.json'),'default_out/out0',False)
-    for step in range(50):
-        print(step)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_fast.json'),'default_out/out0',False)
+    for step in range(30):
         arcsim.sim_step()
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/cloth_hang/demo_jacket_4handles_new.json'),'default_out/out0',False)
+    #for step in range(50):
+    #    print(step)
+    #    arcsim.sim_step()
 
 def test_mask_sim():
     if not os.path.exists('default_out'):
@@ -211,7 +201,7 @@ def test_twoin_fold_demo():
     arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
     for step in range(5):
         arcsim.sim_step()
-    for step in range(20):
+    for step in range(25):
         sim.cloths[0].mesh.nodes[0].v += torch.Tensor([step/2,step/2,step/10]).double()
         sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-step/2,-step/2,step/10]).double()
         #sim.cloths[0].mesh.nodes[3].v += torch.Tensor([-7,-7,1]).double()
@@ -288,26 +278,40 @@ def test_lasso_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_fast.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_fast.json'),'default_out/out0',False)
+    #for step in range(40):
+    #    print(step)
+    #    arcsim.sim_step()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    #print(sim.obs_friction, sim.friction)
+    for step in range(50):
+        print(step)
+        arcsim.sim_step()
+
+def test_materialest_sim():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/material_est/start.json'),'default_out/out0',False)
+    print(sim.cloths[0].materials[0].stretchingori)
+    print(sim.cloths[0].materials[0].bendingori)
     for step in range(40):
         print(step)
         arcsim.sim_step()
 
 if __name__ == '__main__':
+    #test_materialest_sim()
     #test_cloth_hang_sim()
     #test_mask_sim()
     #test_belt_demo()
-    #test_lasso_sim()
-
-
+    test_lasso_sim()
     #test_twoin_fold_demo()
     #test_cube_cloth()
     #test_fricdrag_cloth_demo()
     #test_lasso_sim()
     #test_twoin_fold_demo()
     #test_pants_demo()
-    test_half_fold_demo()
-    #test_quarter_fold_demo()
+    #test_half_fold_demo()
     #test_tshirt_sim()
     #test_fold_demo()
     #test_belt_demo()

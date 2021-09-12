@@ -9,8 +9,8 @@ results = np.load('results.npy')
 ini_p1, ini_p2, final_p1, final_p2, loss = results.T
 
 param1_lab = 'Stiffness'
-param2_lab = 'Mass'
-#param2_lab = 'Gravity'
+#param2_lab = 'Mass'
+param2_lab = 'Gravity'
 
 def normalize(arr):
     return (arr - np.min(arr))/np.ptp(arr)
@@ -43,7 +43,7 @@ ax2.set_ylim(0,np.amax(final_p2)+(np.amax(final_p2) - np.amin(final_p2))/10)
 sm =  ScalarMappable(norm=norm, cmap=cmap_loss)
 sm.set_array([])
 cbar = fig.colorbar(sm, ax=ax2)
-cbar.ax.set_title("loss", fontsize=10)
+cbar.ax.set_title("Loss", fontsize=10)
 
 fig.suptitle("Est. Cloth Params vs. Initial Guesses")
 plt.subplots_adjust(left=0.1, right=0.625, top=0.9)
