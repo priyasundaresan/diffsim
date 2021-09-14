@@ -716,6 +716,18 @@ void load_material_data (Cloth::Material &material, const string &filename, bool
     evaluate_stretching_samples(material.stretching, data);
 }
 
+void reload_material_data (Cloth::Material &material) {
+    material.density = material.densityori*1;
+    material.bending = material.bendingori.unsqueeze(0).unsqueeze(1);
+    StretchingData data = torch::zeros({4,2,5},TNOPT);
+    data.slice(1,0,1) = material.stretchingori[0].unsqueeze(1).unsqueeze(2).repeat({1,1,5});
+    for (int i = 0; i < 5; i++) {
+        data.slice(1,1,2).slice(2,i,i+1) = material.stretchingori[i+1].unsqueeze(1).unsqueeze(2);
+    }
+    data = data.unsqueeze(0);
+    evaluate_stretching_samples(material.stretching, data);
+}
+
 void parse_stretching (StretchingSamples &samples, const Json::Value &json, Cloth::Material &mat) {
     Tensor st = torch::zeros({6,4}, TNOPT);
     Tensor tmp;

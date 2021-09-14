@@ -1,4 +1,5 @@
 import torch
+import pprint
 import arcsim
 import gc
 import time
@@ -7,6 +8,7 @@ import sys
 import gc
 import os
 import numpy as np
+from load_material_props import load_material, combine_materials
 
 def get_target_mesh(conf_dir, path):
     if not os.path.exists('default_out'):
@@ -283,7 +285,39 @@ def test_lasso_sim():
     #    print(step)
     #    arcsim.sim_step()
     arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
-    #print(sim.obs_friction, sim.friction)
+    print(sim.cloths[0].materials[0].densityori)
+    pprint.pprint(sim.cloths[0].materials[0].stretchingori)
+    pprint.pprint(sim.cloths[0].materials[0].bendingori)
+    for step in range(50):
+        print(step)
+        arcsim.sim_step()
+
+def test_lasso_materialest_sim():
+    #materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json']
+    materials = ['11oz-black-denim.json', 'gray-interlock.json']
+    base_dir = 'materials'
+    density_all = []
+    bending_all = []
+    stretching_all = []
+    for m in materials:
+        d,b,s = load_material(os.path.join(base_dir, m), torch.device("cuda:0")) 
+        density_all.append(d)
+        bending_all.append(b.tolist())
+        stretching_all.append(s.tolist())
+    density_all = torch.Tensor(density_all)
+    bending_all = torch.Tensor(bending_all)
+    stretching_all = torch.Tensor(stretching_all)
+    #proportions = torch.Tensor([0.15, 0.65, 0.2])
+    proportions = torch.Tensor([0.15, 0.85])
+    density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    sim.cloths[0].materials[0].densityori= density
+    sim.cloths[0].materials[0].stretchingori = stretch
+    sim.cloths[0].materials[0].bendingori = bend
+    arcsim.reload_material_data(sim.cloths[0].materials[0])
     for step in range(50):
         print(step)
         arcsim.sim_step()
@@ -304,7 +338,8 @@ if __name__ == '__main__':
     #test_cloth_hang_sim()
     #test_mask_sim()
     #test_belt_demo()
-    test_lasso_sim()
+    #test_lasso_sim()
+    test_lasso_materialest_sim()
     #test_twoin_fold_demo()
     #test_cube_cloth()
     #test_fricdrag_cloth_demo()

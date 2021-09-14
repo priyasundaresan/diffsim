@@ -49,6 +49,8 @@ void add_external_forces (const Cloth &cloth, const Tensor &gravity,
                           const Wind &wind, Tensor &fext,
                           Tensor &Jext);
 void compute_ms_data(Mesh &mesh);
+void reload_material_data (Cloth::Material &material);
+void relax_initial_state (Simulation &sim);
 
 void test() {
 	Tensor a = torch::ones({3}, TNOPT);
@@ -72,6 +74,8 @@ PYBIND11_MODULE(arcsim, m){
 	m.def("test", &test);
 	m.def("delete_mesh", &delete_mesh);
 	m.def("add_external_forces",&add_external_forces);
+	m.def("reload_material_data",&reload_material_data);
+	m.def("relax_initial_state",&relax_initial_state);
 	m.def("compute_ms_data",&compute_ms_data);
 	py::class_<CO::ImpactZone>(m, "ImpactZone");
 	m.def("apply_inelastic_projection_forward",&CO::apply_inelastic_projection_forward, CPY);
@@ -94,9 +98,15 @@ PYBIND11_MODULE(arcsim, m){
 		.def_readwrite("cloths",&Simulation::cloths, REF)
 		.def_readwrite("obstacles",&Simulation::obstacles, REF)
 		.def_readwrite("gravity",&Simulation::gravity, REF)
+		.def_readwrite("friction",&Simulation::friction, REF)
+		.def_readwrite("obs_friction",&Simulation::obs_friction, REF)
 		.def_readwrite("wind",&Simulation::wind, REF)
 		.def_readwrite("frame",&Simulation::frame, REF)
 		.def_readwrite("time",&Simulation::time, REF)
+		.def_readwrite("end_time",&Simulation::time, REF)
+		.def_readwrite("end_frame",&Simulation::time, REF)
+		.def_readwrite("frame_time",&Simulation::time, REF)
+		.def_readwrite("frame_steps",&Simulation::frame_steps, REF)
 		.def_readwrite("step",&Simulation::step, REF)
 		;
 	py::class_<Wind>(m, "Wind")
@@ -120,9 +130,12 @@ PYBIND11_MODULE(arcsim, m){
 	py::bind_vector<std::vector<Cloth::Material*> >(m, "VMatP");
 	py::class_<Cloth::Material>(cloth, "Material")
 		.def_readwrite("densityori",&Cloth::Material::densityori, REF)
+		.def_readwrite("density",&Cloth::Material::density, REF)
 		.def_readwrite("stretchingori",&Cloth::Material::stretchingori, REF)
 		.def_readwrite("stretching",&Cloth::Material::stretching, REF)
 		.def_readwrite("bendingori",&Cloth::Material::bendingori, REF)
+		.def_readwrite("bending",&Cloth::Material::bending, REF)
+		.def_readwrite("damping",&Cloth::Material::damping, REF)
 		;
 	py::class_<Mesh>(m, "Mesh")
 		.def(py::init<>())
@@ -138,6 +151,7 @@ PYBIND11_MODULE(arcsim, m){
 		.def_readwrite("m",&Node::m, REF)
 		;
 
+    // PRIYA
 	py::bind_vector<std::vector<Vert*> >(m, "VVertP");
 	py::class_<Vert>(m, "Vert")
 		.def_readwrite("index",&Vert::index, REF)
@@ -147,7 +161,7 @@ PYBIND11_MODULE(arcsim, m){
 
 	py::bind_vector<std::vector<Face*> >(m, "VFaceP");
 	py::class_<Face>(m, "Face")
-		.def_readwrite("v",&Face::v, REF)
+		.def_readwrite("v",&Face::v_arr, REF)
 		.def_readwrite("index",&Face::index, REF)
 		.def_readwrite("a",&Face::a, REF)
 		;
