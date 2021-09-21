@@ -293,8 +293,8 @@ def test_lasso_sim():
         arcsim.sim_step()
 
 def test_lasso_materialest_sim():
-    #materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json']
-    materials = ['11oz-black-denim.json', 'gray-interlock.json']
+    materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json']
+    #materials = ['11oz-black-denim.json', 'gray-interlock.json', 'ivory-rib-knit.json']
     base_dir = 'materials'
     density_all = []
     bending_all = []
@@ -307,8 +307,10 @@ def test_lasso_materialest_sim():
     density_all = torch.Tensor(density_all)
     bending_all = torch.Tensor(bending_all)
     stretching_all = torch.Tensor(stretching_all)
-    #proportions = torch.Tensor([0.15, 0.65, 0.2])
-    proportions = torch.Tensor([0.15, 0.85])
+    #proportions = torch.Tensor([0.2, 0.5, 0.3])
+    #proportions = torch.Tensor([0.0, 0.0, 1.0])
+    #proportions = torch.Tensor([1.0, 0.0, 0.0])
+    proportions = torch.Tensor([0.33, 0.33, 0.33])
     density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
@@ -317,7 +319,10 @@ def test_lasso_materialest_sim():
     sim.cloths[0].materials[0].densityori= density
     sim.cloths[0].materials[0].stretchingori = stretch
     sim.cloths[0].materials[0].bendingori = bend
+    #before = sim.cloths[0].materials[0].bendingori
     arcsim.reload_material_data(sim.cloths[0].materials[0])
+    #after = sim.cloths[0].materials[0].bendingori
+    #print('here', before==after)
     for step in range(50):
         print(step)
         arcsim.sim_step()
@@ -339,7 +344,8 @@ if __name__ == '__main__':
     #test_mask_sim()
     #test_belt_demo()
     #test_lasso_sim()
-    test_lasso_materialest_sim()
+    for _ in range(20):
+        test_lasso_materialest_sim()
     #test_twoin_fold_demo()
     #test_cube_cloth()
     #test_fricdrag_cloth_demo()

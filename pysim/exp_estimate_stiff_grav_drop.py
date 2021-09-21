@@ -146,7 +146,7 @@ def do_train(cur_step,optimizer,sim):
         
         optimizer.step()
         epoch = epoch + 1
-    return param_g, loss
+    return param_g, loss, epoch+1
 # break
 
 with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
@@ -168,8 +168,8 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
             lr = 0.1
             optimizer = torch.optim.Adam([param_g],lr=lr)
             try:
-                result,loss = do_train(cur_step,optimizer,sim)
-                results.append([i,j] + result.squeeze().tolist() + [loss.item()])
+                result,loss,iters = do_train(cur_step,optimizer,sim)
+                results.append([i,j] + result.squeeze().tolist() + [loss.item()] + [iters])
                 os.system('mv %s ./%s/run%d'%(out_path, out_dir,cur_step))
                 os.system('mkdir %s'%out_path)
                 save_config(config, out_path+'/conf.json')

@@ -25,8 +25,9 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 from load_material_props import load_material, combine_materials
-#materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json']
-materials = ['11oz-black-denim.json', 'gray-interlock.json']
+materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json']
+#materials = ['11oz-black-denim.json', 'gray-interlock.json', 'ivory-rib-knit.json']
+#materials = ['11oz-black-denim.json', 'gray-interlock.json']
 base_dir = 'materials'
 density_all = []
 bending_all = []
@@ -129,15 +130,15 @@ def get_loss_per_iter(sim, epoch, sim_step):
     ref_mesh = get_ref_mesh(sim_step)
     ref_pcl = sample_points_from_meshes(ref_mesh, num_points)
     loss_chamfer, _ = chamfer_distance(ref_pcl, curr_pcl)
-    if epoch % 5 == 0:
+    if epoch % 10 == 0:
         plot_pointclouds([curr_pcl, ref_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
     return loss_chamfer
 
 def run_sim(steps, sim, epoch):
+    #reg  = torch.norm(param_g, p=2)*0.001
     loss = 0.0
     proportions = F.softmax(param_g).float()
-    #print("proportions", proportions, "gt", [0.15,0.65,0.2])
-    print("proportions", proportions, "gt", [0.15,0.85])
+    print("proportions", proportions)
     density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
@@ -150,12 +151,13 @@ def run_sim(steps, sim, epoch):
         arcsim.sim_step()
         loss += get_loss_per_iter(sim, epoch, step)
     loss /= steps
+    #return loss + reg.cuda()
     return loss
 
 def do_train(cur_step,optimizer,sim):
     epoch = 0
     loss = float('inf')
-    thresh = 0.004
+    thresh = 0.001
     num_steps_to_run = total_steps
     while True:
         
@@ -165,6 +167,10 @@ def do_train(cur_step,optimizer,sim):
         loss = run_sim(num_steps_to_run, sim, epoch)
         
         if loss < thresh:
+            print(loss)
+            break
+        if epoch > 10:
+            loss = float('inf')
             break
 
         en0 = time.time()
@@ -184,9 +190,6 @@ def do_train(cur_step,optimizer,sim):
         #	torch.save(net.state_dict(), torch_model_path)
         
         optimizer.step()
-        if epoch>=100:
-            loss = float('inf')
-            break
         epoch = epoch + 1
         # break
     return F.softmax(param_g), loss, epoch
@@ -195,38 +198,41 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     tot_step = 1
     sim=arcsim.get_sim()
     
-    #param_g = torch.tensor([0.33,0.33,0.33],dtype=torch.float64, requires_grad=True)
-    #lr = 0.05
-    #optimizer = torch.optim.Adam([param_g],lr=lr)
-    #for cur_step in range(tot_step):
-    #    do_train(cur_step,optimizer,sim)
-
+    initial_probs = torch.tensor([0.33,0.33,0.33],dtype=torch.float64)
+    param_g = torch.log(initial_probs)
+    param_g.requires_grad = True
+    lr = 0.2
+    optimizer = torch.optim.Adam([param_g],lr=lr)
+    for cur_step in range(tot_step):
+        do_train(cur_step,optimizer,sim)
+    
     out_dir = 'exps_lasso_materialest'
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
-
-    results = []
-    cur_step = 0
-    for i in np.linspace(0.15,0.9,10):
-        j = 1.0 - i
-        pprint.pprint(results)
-        initial_probs = torch.tensor([i,j])
-        param_g = torch.log(initial_probs)
-        print(initial_probs, F.softmax(param_g))
-        param_g.requires_grad = True
-        lr = 0.1
-        optimizer = torch.optim.Adam([param_g],lr=lr)
-        result, loss, iters = do_train(cur_step,optimizer,sim)
-        if loss != float('inf'):
-            results.append([i,j] + result.squeeze().tolist() + [loss.item()] + [iters])
-        os.system('mv %s ./%s/run%d'%(out_path, out_dir,cur_step))
-        os.system('mkdir %s'%out_path)
-        save_config(config, out_path+'/conf.json')
-        cur_step += 1
-        np.save('%s/results.npy'%out_dir, results)
-    pprint.pprint(results)
-    results = np.array(results)
-    np.save('%s/results.npy'%out_dir, results)
+    
+    #results = []
+    #cur_step = 0
+    #for i in np.linspace(0.2,0.4,5):
+    #    for j in np.linspace(0.2,0.4,5):
+    #        k = 1.0 - i - j
+    #        pprint.pprint(results)
+    #        initial_probs = torch.tensor([i,j,k])
+    #        param_g = torch.log(initial_probs)
+    #        print(initial_probs, F.softmax(param_g))
+    #        param_g.requires_grad = True
+    #        lr = 0.2
+    #        optimizer = torch.optim.Adam([param_g],lr=lr)
+    #        result, loss, iters = do_train(cur_step,optimizer,sim)
+    #        if loss != float('inf'):
+    #            results.append([i,j,k] + result.squeeze().tolist() + [loss.item()] + [iters])
+    #        os.system('mv %s ./%s/run%d'%(out_path, out_dir,cur_step))
+    #        os.system('mkdir %s'%out_path)
+    #        save_config(config, out_path+'/conf.json')
+    #        cur_step += 1
+    #        np.save('%s/results.npy'%out_dir, results)
+    #pprint.pprint(results)
+    #results = np.array(results)
+    #np.save('%s/results.npy'%out_dir, results)
                                  
 print("done")
 
