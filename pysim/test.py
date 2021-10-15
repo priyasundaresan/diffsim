@@ -72,8 +72,7 @@ def test_cube_cloth():
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start_cube.json'),'default_out/out0',False)
     for node in sim.obstacles[1].curr_state_mesh.nodes:
-    	node.m    *= 0.02
-    	#node.m    *= 0.2
+    	node.m    *= 0.2
     orig_stretch = sim.cloths[0].materials[0].stretching 
     orig_damping = sim.cloths[0].materials[0].damping
     sim.cloths[0].materials[0].stretching = orig_stretch*0.15
@@ -250,7 +249,7 @@ def test_fricdrag_cloth_demo():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/fold/demo_fast.json'),'default_out/out0',False)
-    sim.obs_friction = torch.Tensor([0.1]).double()
+    sim.obs_friction = torch.Tensor([0]).double()
     for step in range(20):
         sim.cloths[0].mesh.nodes[3].v += torch.Tensor([0,10,1]).double()
         arcsim.sim_step()
@@ -281,10 +280,8 @@ def test_lasso_sim():
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     #arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_fast.json'),'default_out/out0',False)
-    #for step in range(40):
-    #    print(step)
-    #    arcsim.sim_step()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_largercube.json'),'default_out/out0',False)
     print(sim.cloths[0].materials[0].densityori)
     pprint.pprint(sim.cloths[0].materials[0].stretchingori)
     pprint.pprint(sim.cloths[0].materials[0].bendingori)
@@ -307,22 +304,27 @@ def test_lasso_materialest_sim():
     density_all = torch.Tensor(density_all)
     bending_all = torch.Tensor(bending_all)
     stretching_all = torch.Tensor(stretching_all)
-    #proportions = torch.Tensor([0.2, 0.5, 0.3])
-    #proportions = torch.Tensor([0.0, 0.0, 1.0])
-    #proportions = torch.Tensor([1.0, 0.0, 0.0])
-    proportions = torch.Tensor([0.33, 0.33, 0.33])
+    proportions = torch.Tensor([0.2, 0.5, 0.3])
     density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/lasso/demo_slow_friction.json'),'default_out/out0',False)
+    for node in sim.obstacles[1].curr_state_mesh.nodes:
+    	node.m    *= 0.05
+    # add friction
+    #sim.obs_friction = torch.Tensor([0.3]).double()
+    #sim.obs_friction = torch.Tensor([0.7]).double()
+    #sim.obs_friction = torch.Tensor([1.0]).double()
+    # set cube mass
+    # set material of cloth
     sim.cloths[0].materials[0].densityori= density
     sim.cloths[0].materials[0].stretchingori = stretch
     sim.cloths[0].materials[0].bendingori = bend
-    #before = sim.cloths[0].materials[0].bendingori
     arcsim.reload_material_data(sim.cloths[0].materials[0])
-    #after = sim.cloths[0].materials[0].bendingori
-    #print('here', before==after)
+    #sim.obs_friction = torch.Tensor([0.3]).double()
+    sim.obs_friction = torch.Tensor([0.001]).double()
     for step in range(50):
         print(step)
         arcsim.sim_step()
@@ -343,9 +345,7 @@ if __name__ == '__main__':
     #test_cloth_hang_sim()
     #test_mask_sim()
     #test_belt_demo()
-    #test_lasso_sim()
-    for _ in range(20):
-        test_lasso_materialest_sim()
+    test_lasso_materialest_sim()
     #test_twoin_fold_demo()
     #test_cube_cloth()
     #test_fricdrag_cloth_demo()

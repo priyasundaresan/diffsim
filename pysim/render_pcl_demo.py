@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 #demo_length = 30
-demo_length = 40
+demo_length = 50
 #demo_length = 45
 #demo_length = 50
 step = 1
@@ -52,8 +52,8 @@ def sim_objs_to_pcls(sim_dir='default_out'):
         all_verts = []
         all_faces = []
         vert_count = 0
-        #for j, f in enumerate(mesh_fnames[:1] + mesh_fnames[2:]):
-        for j, f in enumerate(mesh_fnames):
+        for j, f in enumerate(mesh_fnames[:1] + mesh_fnames[2:]):
+        #for j, f in enumerate(mesh_fnames):
         #for j, f in enumerate(mesh_fnames[:1]):
             verts, faces, aux = load_obj(os.path.join(sim_dir, "out0", f))
             faces_idx = faces.verts_idx + vert_count
