@@ -340,12 +340,96 @@ def test_materialest_sim():
         print(step)
         arcsim.sim_step()
 
+def test_fling_sim():
+    materials = ['11oz-black-denim.json', 'gray-interlock.json', 'navy-sparkle-sweat.json', 'paper.json']
+    materials = ['11oz-black-denim.json', \
+                 'camel-ponte-roma.json', \
+                 'gray-interlock.json', \
+                 'ivory-rib-knit.json', \
+                 'navy-sparkle-sweat.json', \
+                 'paper.json', \
+                 'pink-ribbon-brown.json', \
+                 'royal-target.json', \
+                 'tango-red-jet-set.json', \
+                 'white-dots-on-blk.json', \
+                 'white-swim-solid.json']
+    base_dir = 'materials'
+    density_all = []
+    bending_all = []
+    stretching_all = []
+    for m in materials:
+        d,b,s = load_material(os.path.join(base_dir, m), torch.device("cuda:0")) 
+        density_all.append(d)
+        bending_all.append(b.tolist())
+        stretching_all.append(s.tolist())
+    density_all = torch.Tensor(density_all)
+    bending_all = torch.Tensor(bending_all)
+    stretching_all = torch.Tensor(stretching_all)
+    #proportions = torch.Tensor([0.2, 0.5, 0.3])
+    #proportions = torch.Tensor([0.0, 0.9, 0.0, 0.1])
+    proportions = torch.Tensor([0,0,0,0,1,0,0,0,0,0,0])
+    density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+    sim.cloths[0].materials[0].densityori= density
+    sim.cloths[0].materials[0].stretchingori = stretch
+    sim.cloths[0].materials[0].bendingori = bend
+    arcsim.reload_material_data(sim.cloths[0].materials[0])
+    positions = []
+    for step in range(40):
+        #positions.append(sim.cloths[0].mesh.nodes[48].x.detach().cpu().numpy())
+        positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
+        print(step)
+        arcsim.sim_step()
+    np.save('fling_sim_pos.npy', np.array(positions))
+
+def test_fling_quantized_sim():
+    materials = ['camel-ponte-roma.json']
+    base_dir = 'materials'
+    density_all = []
+    bending_all = []
+    stretching_all = []
+    for m in materials:
+        d,b,s = load_material(os.path.join(base_dir, m), torch.device("cuda:0")) 
+        density_all.append(d)
+        bending_all.append(b.tolist())
+        stretching_all.append(s.tolist())
+    density_all = torch.Tensor(density_all)
+    bending_all = torch.Tensor(bending_all)
+    stretching_all = torch.Tensor(stretching_all)
+    proportions = torch.Tensor([1])
+    density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+
+    stretch_subspace = [0.5,1,2,3,10,20]
+    bend_subspace = [0.5,1,2,3,4,5,10,15,20]
+
+    #stretch *= 10
+    #bend *= 3
+
+    sim.cloths[0].materials[0].densityori= density
+    sim.cloths[0].materials[0].stretchingori = stretch
+    sim.cloths[0].materials[0].bendingori = bend
+    arcsim.reload_material_data(sim.cloths[0].materials[0])
+    positions = []
+    for step in range(40):
+        #positions.append(sim.cloths[0].mesh.nodes[48].x.detach().cpu().numpy())
+        positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
+        print(step)
+        arcsim.sim_step()
+
 if __name__ == '__main__':
     #test_materialest_sim()
     #test_cloth_hang_sim()
     #test_mask_sim()
     #test_belt_demo()
-    test_lasso_materialest_sim()
+    #test_lasso_materialest_sim()
     #test_twoin_fold_demo()
     #test_cube_cloth()
     #test_fricdrag_cloth_demo()
@@ -358,3 +442,5 @@ if __name__ == '__main__':
     #test_belt_demo()
     #test_sysid_sim()
     #test_lift_cloth_corner()
+    test_fling_sim()
+    #test_fling_quantized_sim()

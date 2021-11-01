@@ -17,18 +17,16 @@ from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import (
     chamfer_distance, 
 )
+from pytorch3d.transforms import RotateAxisAngle
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-#demo_length = 30
-demo_length = 50
-#demo_length = 45
-#demo_length = 50
+demo_length = 40
 step = 1
 out_dir = 'demo_pcl_frames'
-num_points = 5000
+num_points = 10000
 
 def plot_pointcloud(points, title=""):
     x, z, y = points.clone().detach().cpu().squeeze().unbind(1)    
@@ -52,9 +50,10 @@ def sim_objs_to_pcls(sim_dir='default_out'):
         all_verts = []
         all_faces = []
         vert_count = 0
-        for j, f in enumerate(mesh_fnames[:1] + mesh_fnames[2:]):
+        #for j, f in enumerate(mesh_fnames[:1] + mesh_fnames[2:]):
+        #for j, f in enumerate(mesh_fnames[1:]):
         #for j, f in enumerate(mesh_fnames):
-        #for j, f in enumerate(mesh_fnames[:1]):
+        for j, f in enumerate(mesh_fnames[:1]):
             verts, faces, aux = load_obj(os.path.join(sim_dir, "out0", f))
             faces_idx = faces.verts_idx + vert_count
             verts = verts

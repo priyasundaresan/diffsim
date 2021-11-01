@@ -153,10 +153,6 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     tot_step = 1
     sim=arcsim.get_sim()
     
-    out_dir = 'exps_stiff_grav'
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    
     results = []
     cur_step = 0
     reset_sim(sim, 0)
