@@ -50,8 +50,10 @@ timestamp = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
 def stretch_fn(x):
     return 35.3*(x**3) - 21.03*(x**2) + 5.354*x + 0.5278
+
 def bend_fn(x):
     return 22.84*(x**3) - 8.358*(x**2) + 5.415*x + 0.5505
+    #return 35.3*(x**3) - 21.03*(x**2) + 5.354*x + 0.5278
 
 with open('conf/rigidcloth/fling/demo_shorter_cloth_camelponteroma.json','r') as f:
 	config = json.load(f)
@@ -77,31 +79,57 @@ def reset_sim(sim, epoch):
 
 
 def plot_pointclouds(pcls, title=""):
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(30, 5))
     titles=['curr', 'ref']
 
-    ax = fig.add_subplot(1, 1, 1, projection='3d')
-    for i,points in enumerate(pcls):
-        #ax = fig.add_subplot(1, 2, i+1, projection='3d')
+    ax_both = fig.add_subplot(141, projection='3d')
+    ax_curr = fig.add_subplot(143, projection='3d')
+    ax_ref = fig.add_subplot(144, projection='3d')
+    ax_initial = fig.add_subplot(142, projection='3d')
+    colors = ['deepskyblue', 'green', 'black']
+    labels = ['curr', 'ref', 'initial']
+    for i,(color,label,points) in enumerate(zip(colors,labels,pcls)):
         x, y, z = points.detach().cpu().numpy().T
-        label = 'curr' if i==0 else 'ref'
-        ax.scatter3D(x, y, z, s=0.2, label=label)
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
+        #label = 'curr' if i==0 else 'ref'
+        #color = '#17becf' if i==0 else 'red'
+        ax_both.scatter3D(x, y, z, s=0.2, label=label, color=color)
+        if i==0:
+            ax_curr.scatter3D(x, y, z, s=0.2, label=label, color=color)
+        elif i==1:
+            ax_ref.scatter3D(x, y, z, s=0.2, label=label, color=color)
+        else:
+            ax_initial.scatter3D(x, y, z, s=0.2, label=label, color=color)
+        ax_both.set_xlabel('x')
+        ax_both.set_ylabel('y')
+        ax_both.set_zlabel('z')
 
         # this is for sim frame
-        ax.set_xlim([-1,1])
-        ax.set_ylim([-1,1])
-        ax.set_zlim([0,1.3])
+        ax_both.set_xlim([-1,1])
+        ax_both.set_ylim([-1,1])
+        ax_both.set_zlim([0,1.3])
 
-        # this is for real frame
-        #ax.set_xlim([0.5,0.9])
-        #ax.set_ylim([-0.4,0.4])
-        #ax.set_zlim([0,0.39])
-        #ax.view_init(30, 85)
-        ax.view_init(30, 40)
-    ax.legend()
+        ax_curr.set_xlim([-1,1])
+        ax_curr.set_ylim([-1,1])
+        ax_curr.set_zlim([0,1.3])
+
+        ax_ref.set_xlim([-1,1])
+        ax_ref.set_ylim([-1,1])
+        ax_ref.set_zlim([0,1.3])
+
+        ax_initial.set_xlim([-1,1])
+        ax_initial.set_ylim([-1,1])
+        ax_initial.set_zlim([0,1.3])
+
+        ax_both.view_init(30, 40)
+        ax_curr.view_init(30, 40)
+        ax_ref.view_init(30, 40)
+        ax_initial.view_init(30, 40)
+
+    ax_both.legend()
+    ax_curr.legend()
+    ax_ref.legend()
+    ax_initial.legend()
+
     plt.savefig(title)
     plt.clf()
     plt.cla()
@@ -117,8 +145,10 @@ def get_render_mesh_from_sim(sim):
     mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
     return mesh
 
-def get_ref_mesh(sim_step):
-    demo_dir = 'demo_exp_learn_scaled_mat_fling_ivoryribknit'
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_whiteswim'):
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_camel'):
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_11ozblackdenim'):
+def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_ivoryribknit'):
     mesh_fnames = sorted([f for f in os.listdir('%s/out0'%(demo_dir)) if '%04d'%sim_step in f])
     all_verts = []
     all_faces = []
@@ -134,51 +164,61 @@ def get_ref_mesh(sim_step):
     mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
     return mesh
 
-def get_loss_per_iter(sim, epoch, sim_step, save):
-    demo_dir = 'demo_exp_learn_mat_fling_real_pcl_video'
+def get_loss_per_iter(sim, epoch, sim_step, save, initial_states=None):
+    #demo_dir = 'demo_exp_learn_mat_fling_real_pcl_video'
     curr_mesh = get_render_mesh_from_sim(sim)
     curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
     #transformed_curr_pcl = (curr_pcl@rotation_pcl)*0.2 + translation_pcl
     ref_mesh = get_ref_mesh(sim_step)
     ref_pcl = sample_points_from_meshes(ref_mesh, num_points)
+    #initial_pcl = sample_points_from_meshes(initial_mesh, num_points)
+
     #ref_pcl = (ref_pcl@rotation_pcl)*0.2 + translation_pcl
     #ref_pcl = torch.from_numpy(np.load('%s/%03d.npy'%(demo_dir, sim_step))).to(device).unsqueeze(0).float()
     #loss_chamfer, _ = chamfer_distance(transformed_curr_pcl, ref_pcl)
     loss_chamfer, _ = chamfer_distance(curr_pcl, ref_pcl)
-    if save:
+    if (save):
+        initial_mesh = initial_states[sim_step]
+        #if initial_states is not None:
+        initial_pcl = sample_points_from_meshes(initial_mesh, num_points)
         #plot_pointclouds([transformed_curr_pcl, ref_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
-        plot_pointclouds([curr_pcl, ref_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
-    return loss_chamfer
+        plot_pointclouds([curr_pcl, ref_pcl, initial_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
+    return loss_chamfer, curr_mesh
 
-def run_sim(steps, sim, epoch, save):
+def run_sim(steps, sim, epoch, save, initial_states=None):
     bend_multiplier, stretch_multiplier = torch.sigmoid(param_g)
     loss = 0.0
 
     orig_stretch = sim.cloths[0].materials[0].stretching
     orig_bend = sim.cloths[0].materials[0].bending
-
-    #new_stretch_multiplier = stretch_multiplier*20
-    #new_bend_multiplier = bend_multiplier*20
+    orig_density = sim.cloths[0].materials[0].densityori
 
     new_stretch_multiplier = stretch_fn(stretch_multiplier)
     new_bend_multiplier = bend_fn(bend_multiplier)
     sim.cloths[0].materials[0].stretching = orig_stretch*new_stretch_multiplier
     sim.cloths[0].materials[0].bending = orig_bend*new_bend_multiplier
 
-    print("stretch and bend:", (stretch_multiplier, new_stretch_multiplier), (bend_multiplier, new_bend_multiplier))
+    #for node in sim.cloths[0].mesh.nodes:
+    #	node.m *= 0.5
+
+
+    print("stretch, bend", (new_stretch_multiplier, new_bend_multiplier))
     print(param_g.grad)
 
+    mesh_states = []
     for step in range(steps):
         print(step)
         arcsim.sim_step()
-        loss += get_loss_per_iter(sim, epoch, step, save=save)
+        loss_curr, curr_mesh = get_loss_per_iter(sim, epoch, step, save=save, initial_states=initial_states)
+        loss += loss_curr
+        mesh_states.append(curr_mesh)
     loss /= steps
 
     #reg  = torch.norm(param_g, p=2)*0.001 
     #return loss + reg.cuda()
-    return loss
+    return loss, mesh_states
 
-def do_train(cur_step,optimizer,sim):
+def do_train(cur_step,optimizer,sim,initial_states):
     epoch = 0
     loss = float('inf')
     thresh = 0.007
@@ -189,8 +229,8 @@ def do_train(cur_step,optimizer,sim):
         reset_sim(sim, epoch)
         
         st = time.time()
-        loss = run_sim(num_steps_to_run, sim, epoch, save=(epoch%5==0))
-        if epoch > 150:
+        loss,_ = run_sim(num_steps_to_run, sim, epoch, save=(epoch%10==0), initial_states=initial_states)
+        if epoch > 100:
             print('epic fail')
             break
 
@@ -199,6 +239,9 @@ def do_train(cur_step,optimizer,sim):
 
         if loss < thresh:
             num_steps_to_run += 1
+
+        #if loss < thresh:
+        #    break
 
         en0 = time.time()
         optimizer.zero_grad()
@@ -219,16 +262,21 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     tot_step = 1
     sim=arcsim.get_sim()
     
+    #initial_probs = torch.tensor([0.5,0.5])
+    #initial_probs = torch.tensor([0.095,0.17])
     initial_probs = torch.tensor([0.5,0.5])
     param_g = torch.log(initial_probs/(torch.ones_like(initial_probs)-initial_probs))
     print("here", torch.sigmoid(param_g))
     param_g.requires_grad = True
-    #lr = 0.1
-    lr = 0.2
+    #lr = 0.05
+    lr = 0.1
+    #lr = 0.2
     optimizer = torch.optim.Adam([param_g],lr=lr)
-    result,loss,iters = do_train(tot_step,optimizer,sim)
+    reset_sim(sim, 0)
+    _, initial_states = run_sim(total_steps, sim, 0, save=False)
+    result,loss,iters = do_train(tot_step,optimizer,sim,initial_states)
     reset_sim(sim, iters+1)
-    run_sim(total_steps, sim, iters+1, save=True)
+    run_sim(total_steps, sim, iters+1, save=True, initial_states=initial_states)
     
 print("done")
 

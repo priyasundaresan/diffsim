@@ -62,7 +62,7 @@ def test_sysid_sim():
     sim = arcsim.get_sim()
     arcsim.init_physics(os.path.join('conf/rigidcloth/sysid/start.json'),'default_out/out0',False)
     orig_stretch = sim.cloths[0].materials[0].stretching 
-    sim.cloths[0].materials[0].stretching = orig_stretch*0.01
+    sim.cloths[0].materials[0].stretching = orig_stretch*1
     for step in range(20):
         arcsim.sim_step()
 
@@ -367,7 +367,7 @@ def test_fling_sim():
     stretching_all = torch.Tensor(stretching_all)
     #proportions = torch.Tensor([0.2, 0.5, 0.3])
     #proportions = torch.Tensor([0.0, 0.9, 0.0, 0.1])
-    proportions = torch.Tensor([0,0,0,0,1,0,0,0,0,0,0])
+    proportions = torch.Tensor([0,0,0,0,0,0.01,0.99,0,0,0,0])
     density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
