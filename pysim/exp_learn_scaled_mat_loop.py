@@ -41,22 +41,14 @@ if not os.path.exists(out_path):
 
 timestamp = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
-#stretch_subspace = torch.Tensor([0.5,1,2,3,10,20]).to(device)
-#stretch_idxs = torch.linspace(0,1,len(stretch_subspace)).to(device)
-#bend_subspace = torch.Tensor([0.5,1,2,3,4,5,10,15,20]).to(device)
-#bend_idxs = torch.linspace(0,1,len(bend_subspace)).to(device)
-#stretch_fn = NaturalCubicSpline(natural_cubic_spline_coeffs(stretch_idxs, stretch_subspace.unsqueeze(1)))
-#bend_fn = NaturalCubicSpline(natural_cubic_spline_coeffs(bend_idxs, bend_subspace.unsqueeze(1)))
-
 def stretch_fn(x):
     #return 35.3*(x**3) - 21.03*(x**2) + 5.354*x + 0.5278
     return 37.61574074*(x**3) + 3.17460317*(x**2) - 1.48478836*x + 0.54365079
 
 def bend_fn(x):
     return 22.84*(x**3) - 8.358*(x**2) + 5.415*x + 0.5505
-    #return 35.3*(x**3) - 21.03*(x**2) + 5.354*x + 0.5278
 
-with open('conf/rigidcloth/fling/demo_shorter_cloth_camelponteroma.json','r') as f:
+with open('conf/rigidcloth/loop_stretch/demo.json','r') as f:
 	config = json.load(f)
 
 def save_config(config, file):
@@ -67,7 +59,7 @@ save_config(config, out_path+'/conf.json')
 
 torch.set_num_threads(8)
 spf = config['frame_steps']
-total_steps = 40
+total_steps = 37
 num_points = 10000
 
 scalev=1
@@ -140,24 +132,26 @@ def get_render_mesh_from_sim(sim):
     cloth_verts = torch.stack([v.node.x for v in sim.cloths[0].mesh.verts]).float().to(device)
     cloth_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.cloths[0].mesh.faces]).to(device)
 
-    all_verts = [cloth_verts]
-    all_faces = [cloth_faces]
+    pole_verts = torch.stack([v.node.x for v in sim.obstacles[0].curr_state_mesh.verts]).float().to(device)
+    pole_faces = torch.Tensor([[vert.index for vert in f.v] for f in sim.obstacles[0].curr_state_mesh.faces]).to(device)
+    pole_faces += len(cloth_verts)
+
+    all_verts = [cloth_verts, pole_verts]
+    all_faces = [cloth_faces, pole_faces]
 
     mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
     return mesh
 
-def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_whitedots'):
-#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_paper'):
-#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_whiteswim'):
-#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_camel'):
-#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_11ozblackdenim'):
-#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_ivoryribknit'):
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_camel'):
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_whitedots'):
+#def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_tango'):
+def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_paper'):
     mesh_fnames = sorted([f for f in os.listdir('%s/out0'%(demo_dir)) if '%04d'%sim_step in f])
     all_verts = []
     all_faces = []
     all_textures = []
     vert_count = 0
-    for j, f in enumerate(mesh_fnames[:1]):
+    for j, f in enumerate(mesh_fnames):
         verts, faces, aux = load_obj(os.path.join(demo_dir, "out0", f))
         faces_idx = faces.verts_idx.to(device) + vert_count
         verts = verts.to(device)
@@ -168,23 +162,15 @@ def get_ref_mesh(sim_step, demo_dir='demo_exp_learn_scaled_mat_fling_whitedots')
     return mesh
 
 def get_loss_per_iter(sim, epoch, sim_step, save, initial_states=None):
-    #demo_dir = 'demo_exp_learn_mat_fling_real_pcl_video'
     curr_mesh = get_render_mesh_from_sim(sim)
     curr_pcl = sample_points_from_meshes(curr_mesh, num_points)
-    #transformed_curr_pcl = (curr_pcl@rotation_pcl)*0.2 + translation_pcl
     ref_mesh = get_ref_mesh(sim_step)
     ref_pcl = sample_points_from_meshes(ref_mesh, num_points)
-    #initial_pcl = sample_points_from_meshes(initial_mesh, num_points)
 
-    #ref_pcl = (ref_pcl@rotation_pcl)*0.2 + translation_pcl
-    #ref_pcl = torch.from_numpy(np.load('%s/%03d.npy'%(demo_dir, sim_step))).to(device).unsqueeze(0).float()
-    #loss_chamfer, _ = chamfer_distance(transformed_curr_pcl, ref_pcl)
     loss_chamfer, _ = chamfer_distance(curr_pcl, ref_pcl)
     if (save):
         initial_mesh = initial_states[sim_step]
-        #if initial_states is not None:
         initial_pcl = sample_points_from_meshes(initial_mesh, num_points)
-        #plot_pointclouds([transformed_curr_pcl, ref_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
         plot_pointclouds([curr_pcl, ref_pcl, initial_pcl], title='%s/epoch%02d-%03d'%(out_path,epoch,sim_step))
     return loss_chamfer, curr_mesh
 
@@ -224,9 +210,9 @@ def run_sim(steps, sim, epoch, save, initial_states=None):
 def do_train(cur_step,optimizer,sim,initial_states):
     epoch = 0
     loss = float('inf')
-    #thresh = 0.008
-    thresh = 0.01
-    num_steps_to_run = 1
+    #thresh = 0.0025
+    thresh = 0.003
+    num_steps_to_run = 5
     while True:
         
         reset_sim(sim, epoch)
@@ -265,17 +251,14 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     tot_step = 1
     sim=arcsim.get_sim()
     
-    #initial_probs = torch.tensor([0.5,0.5])
+    initial_probs = torch.tensor([0.5,0.5])
     #initial_probs = torch.tensor([0.095,0.17])
-    #initial_probs = torch.tensor([0.5,0.5])
-    initial_probs = torch.tensor([0.85,0.85])
-    #initial_probs = torch.tensor([0.95,0.95])
     param_g = torch.log(initial_probs/(torch.ones_like(initial_probs)-initial_probs))
     print("here", torch.sigmoid(param_g))
     param_g.requires_grad = True
-    lr = 0.05
+    #lr = 0.05
     #lr = 0.1
-    #lr = 0.2
+    lr = 0.1
     optimizer = torch.optim.Adam([param_g],lr=lr)
     reset_sim(sim, 0)
     _, initial_states = run_sim(total_steps, sim, 0, save=False)

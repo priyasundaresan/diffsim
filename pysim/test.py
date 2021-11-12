@@ -367,13 +367,14 @@ def test_fling_sim():
     stretching_all = torch.Tensor(stretching_all)
     #proportions = torch.Tensor([0.2, 0.5, 0.3])
     #proportions = torch.Tensor([0.0, 0.9, 0.0, 0.1])
-    proportions = torch.Tensor([0,0,0,0,0,0.01,0.99,0,0,0,0])
+    proportions = torch.Tensor([0,1,0,0,0,0.0,0,0,0,0,0])
     density, bend, stretch = combine_materials(density_all, bending_all, stretching_all, proportions)
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
     #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo.json'),'default_out/out0',False)
-    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth_camelponteroma.json'),'default_out/out0', False)
     sim.cloths[0].materials[0].densityori= density
     sim.cloths[0].materials[0].stretchingori = stretch
     sim.cloths[0].materials[0].bendingori = bend
@@ -384,7 +385,7 @@ def test_fling_sim():
         positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
         print(step)
         arcsim.sim_step()
-    np.save('fling_sim_pos.npy', np.array(positions))
+    np.save('fling_sim_traj.npy', np.array(positions))
 
 def test_fling_quantized_sim():
     materials = ['camel-ponte-roma.json']
@@ -405,7 +406,8 @@ def test_fling_quantized_sim():
     if not os.path.exists('default_out'):
         os.mkdir('default_out')
     sim = arcsim.get_sim()
-    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth.json'),'default_out/out0',False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_cloth_camelponteroma.json'),'default_out/out0', False)
 
     stretch_subspace = [0.5,1,2,3,10,20]
     bend_subspace = [0.5,1,2,3,4,5,10,15,20]
@@ -423,6 +425,42 @@ def test_fling_quantized_sim():
         positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
         print(step)
         arcsim.sim_step()
+
+def test_loop_stretch():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    positions = []
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/loop_stretch/demo.json'),'default_out/out0', False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/loop_stretch/demo3.json'),'default_out/out0', False)
+    for step in range(40):
+        print(step)
+        positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
+        print(positions[-1])
+        arcsim.sim_step()
+    np.save('stretch_sim_traj.npy', np.array(positions))
+
+def test_fast_fling():
+    if not os.path.exists('default_out'):
+        os.mkdir('default_out')
+    sim = arcsim.get_sim()
+    positions = []
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo.json'),'default_out/out0', False)
+    arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo2.json'),'default_out/out0', False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo3.json'),'default_out/out0', False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo4.json'),'default_out/out0', False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_shorter_higherpoly.json'),'default_out/out0', False)
+    #arcsim.init_physics(os.path.join('conf/rigidcloth/fling/demo_faster.json'),'default_out/out0', False)
+    orig_stretch = sim.cloths[0].materials[0].stretching 
+    orig_bend = sim.cloths[0].materials[0].bending 
+    #sim.cloths[0].materials[0].stretching = orig_stretch*10
+    #sim.cloths[0].materials[0].bending = orig_bend*0.005
+    for step in range(20):
+        positions.append(sim.cloths[0].mesh.nodes[36].x.detach().cpu().numpy())
+        print(step, positions[-1])
+        arcsim.sim_step()
+    print('here')
+    np.save('fling_fast_sim_traj.npy', np.array(positions))
 
 if __name__ == '__main__':
     #test_materialest_sim()
@@ -442,5 +480,7 @@ if __name__ == '__main__':
     #test_belt_demo()
     #test_sysid_sim()
     #test_lift_cloth_corner()
-    test_fling_sim()
+    #test_fling_sim()
     #test_fling_quantized_sim()
+    test_loop_stretch()
+    #test_fast_fling()

@@ -23,24 +23,26 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-demo_length = 40
+demo_length = 30
 step = 1
 out_dir = 'demo_pcl_frames'
 num_points = 10000
 
 def plot_pointcloud(points, title=""):
-    x, z, y = points.clone().detach().cpu().squeeze().unbind(1)    
+    x, y, z = points.clone().detach().cpu().squeeze().unbind(1)    
     fig = plt.figure(figsize=(5, 5))
     ax = Axes3D(fig)
-    ax.scatter3D(x, z, y, s=0.15)
+    ax.scatter3D(x, y, z, s=0.2)
     ax.set_xlabel('x')
-    ax.set_ylabel('z')
-    ax.set_zlabel('y')
-    ax.set_title(title)
-    ax.view_init(100, -60)
-    #plt.savefig(title)
-    #plt.clf()
-    plt.show()
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    ax.set_xlim([-1,1])
+    ax.set_ylim([-1,1])
+    ax.set_zlim([0,1.3])
+    ax.view_init(30, 40)
+    #ax.set_title(title)
+    #ax.view_init(100, -60)
+    #plt.show()
 
 def sim_objs_to_pcls(sim_dir='default_out'):
     if not os.path.exists(out_dir):
@@ -52,8 +54,8 @@ def sim_objs_to_pcls(sim_dir='default_out'):
         vert_count = 0
         #for j, f in enumerate(mesh_fnames[:1] + mesh_fnames[2:]):
         #for j, f in enumerate(mesh_fnames[1:]):
-        #for j, f in enumerate(mesh_fnames):
-        for j, f in enumerate(mesh_fnames[:1]):
+        for j, f in enumerate(mesh_fnames):
+        #for j, f in enumerate(mesh_fnames[:1]):
             verts, faces, aux = load_obj(os.path.join(sim_dir, "out0", f))
             faces_idx = faces.verts_idx + vert_count
             verts = verts
@@ -63,7 +65,7 @@ def sim_objs_to_pcls(sim_dir='default_out'):
         mesh = Meshes(verts=[torch.cat(all_verts)], faces=[torch.cat(all_faces)])
         sample_pcl = sample_points_from_meshes(mesh, num_points)
         np.save(os.path.join(out_dir, '%03d.npy'%i), sample_pcl)
-        #plot_pointcloud(sample_pcl)
+        plot_pointcloud(sample_pcl)
         #break
 if __name__ == '__main__':
     sim_objs_to_pcls()
