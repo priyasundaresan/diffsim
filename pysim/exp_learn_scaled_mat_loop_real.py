@@ -156,7 +156,8 @@ def real2sim_transf(points, trans, scale, rot_inv):
     return ((points - trans)/scale)@rot_inv
 
 #def get_ref_pcl(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_real'):
-def get_ref_pcl(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_real_stretchblack3'):
+#def get_ref_pcl(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_real_stretchblack3'):
+def get_ref_pcl(sim_step, demo_dir='demo_exp_learn_scaled_mat_loop_real_stretchblack2'):
     rot = R.from_euler('z', 90, degrees=True).as_matrix()
     rot_inv = R.from_euler('z', 90, degrees=True).inv().as_matrix()
     trans = np.array([0.65,0.04,0.0385])
@@ -221,7 +222,7 @@ def run_sim(steps, sim, epoch, save, initial_states=None):
 def do_train(cur_step,optimizer,sim,initial_states):
     epoch = 0
     loss = float('inf')
-    thresh = 0.02
+    thresh = 0.012
     num_steps_to_run = 16
     while True:
         
@@ -267,7 +268,7 @@ with open(out_path+('/log%s.txt'%timestamp),'w',buffering=1) as f:
     param_g = torch.log(initial_probs/(torch.ones_like(initial_probs)-initial_probs))
     print("here", torch.sigmoid(param_g))
     param_g.requires_grad = True
-    lr = 0.2
+    lr = 0.3
     optimizer = torch.optim.Adam([param_g],lr=lr)
     reset_sim(sim, 0)
     _, initial_states = run_sim(total_steps, sim, 0, save=False)
